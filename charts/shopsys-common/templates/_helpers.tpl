@@ -79,16 +79,13 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- .Values.security.httpAuth.existingSecret | default "http-auth" -}}
 {{- end }}
 
-{{/* Effective htpasswd content of the chart-managed http-auth secret.
-     Raw content (security.httpAuth.htpasswd) wins; otherwise the entry is generated
-     from username + password via the Sprig htpasswd function (bcrypt).
+{{/* htpasswd content of the chart-managed http-auth secret, generated from
+     username + password via the Sprig htpasswd function (bcrypt).
      NOTE: the generated hash uses a random salt, so it is NOT deterministic across
-     renders - never use username/password in golden test scenarios. */}}
+     renders - golden test scenarios must use existingSecret instead. */}}
 {{- define "shopsys.httpAuthContent" -}}
 {{- $auth := .Values.security.httpAuth -}}
-{{- if $auth.htpasswd -}}
-{{- $auth.htpasswd -}}
-{{- else if and $auth.username $auth.password -}}
+{{- if and $auth.username $auth.password -}}
 {{- htpasswd $auth.username $auth.password -}}
 {{- end -}}
 {{- end }}

@@ -22,12 +22,12 @@
 #   REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL  registry credentials (any registry);
 #     GitLab fallback: CI_REGISTRY + DEPLOY_REGISTER_USER/PASSWORD
 #   RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS
-#   BASIC_AUTH_PATH                          raw htpasswd file (optional - without it
-#     HTTP_AUTH_CREDENTIALS "user:password" generates the htpasswd entry in-chart)
 #   FIRST_DEPLOY, FIRST_DEPLOY_LOAD_DEMO_DATA
 #   DISPLAY_FINAL_CONFIGURATION              1 = print rendered manifests
-#   HTTP_AUTH_CREDENTIALS                    credentials for the website check (default username:password)
 #   DISABLE_WEBSITE_RUNNING_CHECK            true = skip the website check
+#
+# HTTP basic auth is configured purely in values (security.httpAuth.username/password
+# or existingSecret); the website check reads the credentials from the deployed release.
 #   SLACK_TOKEN, SLACK_CHANNEL, ...          slack notification (see docs)
 #   HELMFILE_EXTRA_ARGS                      extra arguments appended to helmfile commands
 
@@ -134,7 +134,8 @@ print_job_logs "migrate-application" "Logs from migration application"
 print_job_logs "post-deploy" "Logs from post-deploy tasks"
 
 # Website check: domain URLs and their HTTP auth state are read from the rendered
-# manifests, so the check always matches what was actually deployed.
+# manifests, and the auth credentials from the deployed release values - the check
+# always matches what was actually deployed.
 if [ "${DISABLE_WEBSITE_RUNNING_CHECK:-false}" = "false" ]; then
     RENDERED=$("${HELMFILE[@]}" template --skip-deps 2>/dev/null)
 
@@ -145,13 +146,17 @@ if [ "${DISABLE_WEBSITE_RUNNING_CHECK:-false}" = "false" ]; then
     AUTH_HOSTS=$(echo "${RENDERED}" \
         | yq eval-all 'select(.kind == "Ingress" and (.metadata.annotations."nginx.ingress.kubernetes.io/auth-type" == "basic")) | .spec.rules[0].host' -)
 
+    AUTH_USER=$(helm get values shopsys-app -n "${NAMESPACE}" --all -o yaml 2>/dev/null | yq '.security.httpAuth.username // ""')
+    AUTH_PASSWORD=$(helm get values shopsys-app -n "${NAMESPACE}" --all -o yaml 2>/dev/null | yq '.security.httpAuth.password // ""')
+
     for URL in ${DOMAIN_URLS}; do
         HOSTNAME_ONLY=$(echo "${URL}" | sed 's|https://||; s|/.*||')
         echo -n "Check if website is running (${URL}) "
 
-        if echo "${AUTH_HOSTS}" | grep -qx "${HOSTNAME_ONLY}"; then
-            CURL_RETURN_CODE=$(curl --user "${HTTP_AUTH_CREDENTIALS:-username:password}" -L -s -o /dev/null -w "%{http_code}" "${URL}")
+        if echo "${AUTH_HOSTS}" | grep -qx "${HOSTNAME_ONLY}" && [ -n "${AUTH_USER}" ] && [ -n "${AUTH_PASSWORD}" ]; then
+            CURL_RETURN_CODE=$(curl --user "${AUTH_USER}:${AUTH_PASSWORD}" -L -s -o /dev/null -w "%{http_code}" "${URL}")
         else
+            # No credentials known (e.g. existingSecret) - a 401 response ends as SKIP below
             CURL_RETURN_CODE=$(curl -L -s -o /dev/null -w "%{http_code}" "${URL}")
         fi
 

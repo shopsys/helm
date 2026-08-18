@@ -366,21 +366,6 @@ data:
   .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJhdXRoIjoiWkdWd2JHOTVMWFZ6WlhJNlpHVndiRzk1TFhCaGMzTjNiM0prIiwiZW1haWwiOiIiLCJwYXNzd29yZCI6ImRlcGxveS1wYXNzd29yZCIsInVzZXJuYW1lIjoiZGVwbG95LXVzZXIifX19
 
 ---
-# Source: shopsys-app/templates/secret-http-auth.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: http-auth
-  labels:
-    app.kubernetes.io/name: shopsys-app
-    app.kubernetes.io/instance: shopsys-app
-    app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: shopsys-app-1.0.0
-type: Opaque
-stringData:
-  auth: "testuser:$apr1$test$hashedpassword\n"
-
----
 # Source: shopsys-app/templates/configmap-cron-env.yaml
 apiVersion: v1
 kind: ConfigMap

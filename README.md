@@ -40,7 +40,6 @@ helmfile -e devel diff
 TAG=<app-image> STOREFRONT_TAG=<storefront-image> \
 CI_REGISTRY=... DEPLOY_REGISTER_USER=... DEPLOY_REGISTER_PASSWORD=... \
 RABBITMQ_DEFAULT_USER=... RABBITMQ_DEFAULT_PASS=... \
-BASIC_AUTH_PATH=./deploy/basicHttpAuth \
 ./deploy/deploy.sh devel
 ```
 

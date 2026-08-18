@@ -44,7 +44,6 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
-            "htpasswd": { "type": "string" },
             "username": { "type": "string" },
             "password": { "type": "string" },
             "existingSecret": { "type": "string" }

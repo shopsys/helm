@@ -29,10 +29,10 @@ ingress:
 security:
   httpAuth:
     enabled: false       # enable HTTP basic auth on all domains (legacy RUNNING_PRODUCTION=0 behavior)
-    htpasswd: ""         # raw htpasswd file content - sensitive, provide via environment interpolation
-    # Alternative to raw htpasswd content: the chart generates the htpasswd entry (bcrypt)
-    # from these credentials. The generated hash uses a random salt, so it is NOT
-    # deterministic across renders - never use in golden test scenarios.
+    # Credentials the chart generates the htpasswd entry (bcrypt) from. Required when
+    # auth is active, unless existingSecret is set. The generated hash uses a random
+    # salt, so it is NOT deterministic across renders - golden test scenarios must use
+    # existingSecret instead.
     username: ""
     password: ""
     # Name of an externally managed secret with an `auth` key; when set, the chart does

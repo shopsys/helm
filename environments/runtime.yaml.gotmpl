@@ -42,23 +42,6 @@ rabbitmq:
     password: {{ env "RABBITMQ_DEFAULT_PASS" | quote }}
 {{- end }}
 
-{{- /*
-HTTP basic auth content: a raw htpasswd file (BASIC_AUTH_PATH) wins; without it the
-credentials from HTTP_AUTH_CREDENTIALS ("user:password" - the same variable the website
-check uses) let the chart generate the htpasswd entry itself.
-*/}}
-{{- if env "BASIC_AUTH_PATH" }}
-security:
-  httpAuth:
-    htpasswd: {{ readFile (env "BASIC_AUTH_PATH") | quote }}
-{{- else if env "HTTP_AUTH_CREDENTIALS" }}
-{{- $credentials := splitn ":" 2 (env "HTTP_AUTH_CREDENTIALS") }}
-security:
-  httpAuth:
-    username: {{ $credentials._0 | quote }}
-    password: {{ $credentials._1 | quote }}
-{{- end }}
-
 deploy:
 {{- if env "DEPLOY_TIMESTAMP" }}
   timestamp: {{ env "DEPLOY_TIMESTAMP" | quote }}

@@ -3,6 +3,9 @@
 security:
   httpAuth:
     enabled: true
+    # the chart generates the htpasswd entry from these credentials
+    username: username
+    password: password
 
 app:
   envDefaults:
