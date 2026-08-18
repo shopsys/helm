@@ -26,6 +26,11 @@ security:
 imagePullSecrets:
   - dockerregistry
 
+registry:
+  # Name of an externally managed image pull secret (shared value with the app chart);
+  # when set, pods reference this name instead of "dockerregistry".
+  existingSecret: ""
+
 redis:
   enabled: true
   image:

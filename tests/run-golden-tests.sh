@@ -61,7 +61,6 @@ export DEPLOY_REGISTER_USER="deploy-user"
 export DEPLOY_REGISTER_PASSWORD="deploy-password"
 export RABBITMQ_DEFAULT_USER="rabbitmq"
 export RABBITMQ_DEFAULT_PASS="rabbitmq-password"
-export BASIC_AUTH_PATH="${SCRIPT_DIR}/fixtures/basicHttpAuth"
 # Frozen timestamp for deterministic output (legacy FREEZE_TIMESTAMP)
 export DEPLOY_TIMESTAMP="1234567890"
 

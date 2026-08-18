@@ -1,8 +1,5 @@
 # Development environment (legacy RUNNING_PRODUCTION=0 behavior expressed purely as values).
-
-security:
-  httpAuth:
-    enabled: true
+# HTTP basic auth is inherited from base.yaml (enabled everywhere, production opts out).
 
 app:
   envDefaults:

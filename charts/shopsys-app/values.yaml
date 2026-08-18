@@ -29,7 +29,15 @@ ingress:
 security:
   httpAuth:
     enabled: false       # enable HTTP basic auth on all domains (legacy RUNNING_PRODUCTION=0 behavior)
-    htpasswd: ""         # htpasswd file content - sensitive, provide via environment interpolation
+    # Credentials the chart generates the htpasswd entry (bcrypt) from. Required when
+    # auth is active, unless existingSecret is set. The generated hash uses a random
+    # salt, so it is NOT deterministic across renders - golden test scenarios must use
+    # existingSecret instead.
+    username: ""
+    password: ""
+    # Name of an externally managed secret with an `auth` key; when set, the chart does
+    # not render the http-auth secret and the ingress auth-secret annotation points here.
+    existingSecret: ""
   # IPs allowed to bypass HTTP basic auth (legacy DEFAULT_WHITELIST_IPS + WHITELIST_IPS)
   whitelistIps: []
   cloudflare:
@@ -49,6 +57,9 @@ registry:
   username: ""
   password: ""
   email: ""
+  # Name of an externally managed image pull secret; when set, the chart does not render
+  # the dockerregistry secret and pods reference this name instead.
+  existingSecret: ""
 
 imagePullSecrets:
   - dockerregistry

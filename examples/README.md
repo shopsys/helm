@@ -3,7 +3,9 @@
 A project needs three things:
 
 1. **`environments/` directory** — copy `environments/` from this repository and adjust:
-   - `base.yaml`: project name, domains, `app.env`, crons, consumers — shared configuration,
+   - `base.yaml`: project name, domains, `app.env`, crons, consumers — shared configuration;
+     HTTP basic auth is enabled here for every environment (secure by default) and the
+     production environment disables it,
    - one directory per environment (`production/`, `devel/`, `staging/`, ... any names and
      any number) with `values.yaml` containing only the differences from base,
    - keep `runtime.yaml.gotmpl` as is (maps CI env vars to values).
@@ -20,12 +22,11 @@ A project needs three things:
    | `TAG`, `STOREFRONT_TAG` | full image references built by the pipeline |
    | `REGISTRY_SERVER`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` (+ optional `REGISTRY_EMAIL`) | registry pull secret — any registry; GitLab fallback: `CI_REGISTRY` + `DEPLOY_REGISTER_USER/PASSWORD`; GCR/GAR: username `_json_key`, password = service account JSON |
    | `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS` | RabbitMQ credentials |
-   | `BASIC_AUTH_PATH` | path to the htpasswd file (checked into the project like before) |
    | `FIRST_DEPLOY=1` | only for the very first deploy of an instance (`FIRST_DEPLOY_LOAD_DEMO_DATA=1` to load demo data) |
    | `DISPLAY_FINAL_CONFIGURATION=1` | print rendered manifests into the job log |
    | `HELMFILE_EXTRA_ARGS` | e.g. `--state-values-set ...` or extra `--set-string app.env.DATABASE_PASSWORD=$DB_PASS` style injections |
    | `SLACK_TOKEN`, `SLACK_CHANNEL`, `API_TOKEN`, `JIRA_URL`, `SLACK_DISABLE_CHANGES` | optional Slack notifications |
-   | `HTTP_AUTH_CREDENTIALS`, `DISABLE_WEBSITE_RUNNING_CHECK` | website check tuning |
+   | `DISABLE_WEBSITE_RUNNING_CHECK` | website check tuning (auth credentials are read from `security.httpAuth.*` values) |
 
 Secrets for the application itself (database password etc.) belong in CI variables and are
 referenced from `environments/runtime.yaml.gotmpl` in the project (e.g.

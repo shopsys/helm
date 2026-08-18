@@ -8,6 +8,14 @@ project:
 domains:
   - hostname: www.example.com
 
+# Secure by default: every environment is protected by HTTP basic auth.
+# Production opts out explicitly (see environments/production/values.yaml).
+security:
+  httpAuth:
+    enabled: true
+    username: shopsys
+    password: shopsys
+
 # Backend application environment variables shared by all environments.
 # Values must be strings - quote numbers and booleans.
 app:

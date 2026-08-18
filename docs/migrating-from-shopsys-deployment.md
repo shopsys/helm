@@ -27,8 +27,8 @@ Helm/Helmfile package.
    (see `environments/devel/values.yaml` in this repo).
 5. **Update CI**: replace the legacy deploy script invocation with
    `./deploy/deploy.sh <environment>`. Required env vars: `TAG`, `STOREFRONT_TAG`,
-   registry credentials, `RABBITMQ_DEFAULT_USER/PASS`, `BASIC_AUTH_PATH`
-   (+ optional Slack vars). `FIRST_DEPLOY=1` for the first deploy of an instance.
+   registry credentials (not needed with `registry.existingSecret`) and
+   `RABBITMQ_DEFAULT_USER/PASS` (+ optional Slack vars). `FIRST_DEPLOY=1` for the first deploy of an instance.
 6. **One-time cleanup in the cluster** (first migration deploy only):
    - the kustomize-generated ConfigMaps (`domains-urls-<hash>`) become orphaned — delete them,
    - resources previously applied by `kubectl apply` are adopted by Helm on the first
@@ -97,7 +97,12 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     untouched (selectors are immutable on existing Deployments).
 17. **Redis is the first container** of its pod (exporter second) so `kubectl logs` and
     `kubectl exec` target the `redis` container by default (adopted from shopsys/deployment#74).
-18. **GCloud-specific registry branch removed** (`GCLOUD_DEPLOY` +
+18. **HTTP auth credentials moved into values**: the `basicHttpAuth` htpasswd file,
+    `BASIC_AUTH_PATH` and `HTTP_AUTH_CREDENTIALS` are gone. Set
+    `security.httpAuth.username/password` (the chart generates the htpasswd entry, bcrypt)
+    or `security.httpAuth.existingSecret`; enabling auth without either fails the render.
+    The website check reads the credentials from the deployed release values.
+19. **GCloud-specific registry branch removed** (`GCLOUD_DEPLOY` +
     `GCLOUD_CONTAINER_REGISTRY_*`) — dropped upstream too (shopsys/deployment#77). The pull
     secret is registry-agnostic: set the generic `REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL`
     env vars (works with any registry — GCR/GAR via username `_json_key` and the service

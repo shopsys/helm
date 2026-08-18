@@ -42,12 +42,6 @@ rabbitmq:
     password: {{ env "RABBITMQ_DEFAULT_PASS" | quote }}
 {{- end }}
 
-{{- if env "BASIC_AUTH_PATH" }}
-security:
-  httpAuth:
-    htpasswd: {{ readFile (env "BASIC_AUTH_PATH") | quote }}
-{{- end }}
-
 deploy:
 {{- if env "DEPLOY_TIMESTAMP" }}
   timestamp: {{ env "DEPLOY_TIMESTAMP" | quote }}

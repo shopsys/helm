@@ -3,6 +3,9 @@
 security:
   httpAuth:
     enabled: true
+    # golden determinism: the generated htpasswd hash is salted, so scenarios must
+    # reference an existing secret instead of username/password
+    existingSecret: http-auth
 app:
   envDefaults:
     MAILER_FORCE_WHITELIST: "true"

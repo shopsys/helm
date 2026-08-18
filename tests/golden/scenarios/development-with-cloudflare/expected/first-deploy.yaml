@@ -366,21 +366,6 @@ data:
   .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJhdXRoIjoiWkdWd2JHOTVMWFZ6WlhJNlpHVndiRzk1TFhCaGMzTjNiM0prIiwiZW1haWwiOiIiLCJwYXNzd29yZCI6ImRlcGxveS1wYXNzd29yZCIsInVzZXJuYW1lIjoiZGVwbG95LXVzZXIifX19
 
 ---
-# Source: shopsys-app/templates/secret-http-auth.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: http-auth
-  labels:
-    app.kubernetes.io/name: shopsys-app
-    app.kubernetes.io/instance: shopsys-app
-    app.kubernetes.io/managed-by: Helm
-    helm.sh/chart: shopsys-app-1.0.0
-type: Opaque
-stringData:
-  auth: "testuser:$apr1$test$hashedpassword\n"
-
----
 # Source: shopsys-app/templates/configmap-cron-env.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -1364,7 +1349,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
     nginx.ingress.kubernetes.io/configuration-snippet: "if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^www\\.(?<domain>.+)$) { return 308 https://$domain$request_uri; }"
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: http-auth
+    nginx.ingress.kubernetes.io/auth-secret: "http-auth"
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required - ok
     nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,192.168.0.0/16"
     nginx.ingress.kubernetes.io/satisfy: any

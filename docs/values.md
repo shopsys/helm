@@ -52,14 +52,18 @@ ingress:
 
 security:
   httpAuth:
-    enabled: false           # dev environments: true (former RUNNING_PRODUCTION=0)
-    htpasswd: ""             # sensitive → BASIC_AUTH_PATH env var
+    enabled: false           # chart default; the example base.yaml enables it for every
+                             # environment (secure by default) and production opts out
+    username: ""             # the chart generates the htpasswd entry (bcrypt) from these;
+    password: ""             #   required when auth is active (unless existingSecret is set)
+    existingSecret: ""       # OR reference an externally managed secret (key `auth`)
   whitelistIps: []           # IPs bypassing basic auth
   cloudflare: { enabled: false }
   mcp: { enabled: true, ipWhitelist: [] }
   feApiKeys: {}              # optional declarative keypair
 
-registry: {...}              # image pull secret; sensitive → env vars
+registry:                    # image pull secret; credentials sensitive → env vars
+  existingSecret: ""         # OR reference an externally managed pull secret
 
 app:                         # shared backend configuration
   env: {}                    # backend env vars (webserver, cron, consumers, migration)
@@ -103,7 +107,7 @@ an environment file — they are not merged. Maps merge deeply.
 | `ENABLE_AUTOSCALING`, `MIN/MAX_*_REPLICAS` | `webserver.autoscaling` + `storefront.autoscaling` (independent) |
 | `PHP_FPM_CPU_REQUEST` / `STOREFRONT_CPU_REQUEST` / `DOWNSCALE_RESOURCE` | `*.resources.requests` in environment values |
 | `DEPLOY_REGISTER_USER/PASSWORD`, `CI_REGISTRY` | env vars → `registry.*` (runtime.yaml.gotmpl); generic `REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL` take precedence and work with any registry (GCR/GAR: username `_json_key`, password = service account JSON) |
-| `BASIC_AUTH_PATH` | env var → `security.httpAuth.htpasswd` (runtime.yaml.gotmpl) |
+| `BASIC_AUTH_PATH`, `HTTP_AUTH_CREDENTIALS` | gone — HTTP auth credentials live in values (`security.httpAuth.username/password`, or `existingSecret`); the website check reads them from the deployed release |
 | `WHITELIST_IPS` + `DEFAULT_WHITELIST_IPS` | `security.whitelistIps` (single committed list) |
 | `FORCE_HTTP_AUTH_IN_PRODUCTION` | `domains[].forceHttpAuth` |
 | `USING_CLOUDFLARE` / `CLOUDFLARE_EXCLUDED_DOMAINS` | `security.cloudflare.enabled` / `domains[].cloudflareExcluded` |
@@ -116,4 +120,4 @@ an environment file — they are not merged. Maps merge deeply.
 | `STOREFRONT_ENVIRONMENT_VARIABLES` array | `storefront.env` |
 | `CRON_INSTANCES` array | `cron.instances` |
 | `DEFAULT_CONSUMERS` array | `consumers.instances` |
-| `DISPLAY_FINAL_CONFIGURATION`, `HTTP_AUTH_CREDENTIALS`, `DISABLE_WEBSITE_RUNNING_CHECK`, Slack vars | stay env vars of the deploy wrapper |
+| `DISPLAY_FINAL_CONFIGURATION`, `DISABLE_WEBSITE_RUNNING_CHECK`, Slack vars | stay env vars of the deploy wrapper |
