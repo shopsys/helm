@@ -1,5 +1,9 @@
 # Production environment.
-# Production behavior is the chart default - override only production-specific settings here.
+
+# The base enables HTTP basic auth for every environment; production is public.
+security:
+  httpAuth:
+    enabled: false
 
 webserver:
   autoscaling:

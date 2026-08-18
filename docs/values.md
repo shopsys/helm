@@ -52,7 +52,8 @@ ingress:
 
 security:
   httpAuth:
-    enabled: false           # dev environments: true (former RUNNING_PRODUCTION=0)
+    enabled: false           # chart default; the example base.yaml enables it for every
+                             # environment (secure by default) and production opts out
     username: ""             # the chart generates the htpasswd entry (bcrypt) from these;
     password: ""             #   required when auth is active (unless existingSecret is set)
     existingSecret: ""       # OR reference an externally managed secret (key `auth`)

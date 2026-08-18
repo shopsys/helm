@@ -3,7 +3,9 @@
 A project needs three things:
 
 1. **`environments/` directory** — copy `environments/` from this repository and adjust:
-   - `base.yaml`: project name, domains, `app.env`, crons, consumers — shared configuration,
+   - `base.yaml`: project name, domains, `app.env`, crons, consumers — shared configuration;
+     HTTP basic auth is enabled here for every environment (secure by default) and the
+     production environment disables it,
    - one directory per environment (`production/`, `devel/`, `staging/`, ... any names and
      any number) with `values.yaml` containing only the differences from base,
    - keep `runtime.yaml.gotmpl` as is (maps CI env vars to values).
