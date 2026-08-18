@@ -80,6 +80,33 @@ tests:
           content:
             name: dockerregistry
 
+  - it: still references the existing pull secret when imagePullSecrets omits the placeholder
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      imagePullSecrets: []
+      registry:
+        existingSecret: my-pull-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-pull-secret
+
+  - it: does not duplicate an explicitly listed existing pull secret
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      imagePullSecrets:
+        - my-pull-secret
+        - other-secret
+      registry:
+        existingSecret: my-pull-secret
+    asserts:
+      - equal:
+          path: spec.template.spec.imagePullSecrets
+          value:
+            - name: my-pull-secret
+            - name: other-secret
+
   - it: propagates pod annotations and labels
     template: templates/deployment-webserver-php-fpm.yaml
     set:

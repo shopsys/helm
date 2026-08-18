@@ -1349,7 +1349,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
     nginx.ingress.kubernetes.io/configuration-snippet: "if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^www\\.(?<domain>.+)$) { return 308 https://$domain$request_uri; }"
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: http-auth
+    nginx.ingress.kubernetes.io/auth-secret: "http-auth"
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required - ok
     nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,192.168.0.0/16"
     nginx.ingress.kubernetes.io/satisfy: any

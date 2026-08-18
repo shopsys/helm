@@ -146,8 +146,14 @@ if [ "${DISABLE_WEBSITE_RUNNING_CHECK:-false}" = "false" ]; then
     AUTH_HOSTS=$(echo "${RENDERED}" \
         | yq eval-all 'select(.kind == "Ingress" and (.metadata.annotations."nginx.ingress.kubernetes.io/auth-type" == "basic")) | .spec.rules[0].host' -)
 
-    AUTH_USER=$(helm get values shopsys-app -n "${NAMESPACE}" --all -o yaml 2>/dev/null | yq '.security.httpAuth.username // ""')
-    AUTH_PASSWORD=$(helm get values shopsys-app -n "${NAMESPACE}" --all -o yaml 2>/dev/null | yq '.security.httpAuth.password // ""')
+    if RELEASE_VALUES=$(helm get values shopsys-app -n "${NAMESPACE}" --all -o yaml 2>&1); then
+        AUTH_USER=$(echo "${RELEASE_VALUES}" | yq '.security.httpAuth.username // ""')
+        AUTH_PASSWORD=$(echo "${RELEASE_VALUES}" | yq '.security.httpAuth.password // ""')
+    else
+        echo -e "[${YELLOW}WARN${NO_COLOR}] Could not read release values (${RELEASE_VALUES}); auth-protected domains will be reported as SKIP"
+        AUTH_USER=""
+        AUTH_PASSWORD=""
+    fi
 
     for URL in ${DOMAIN_URLS}; do
         HOSTNAME_ONLY=$(echo "${URL}" | sed 's|https://||; s|/.*||')

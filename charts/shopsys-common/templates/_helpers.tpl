@@ -91,18 +91,31 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end }}
 
 {{/* Pod imagePullSecrets list. The chart-managed "dockerregistry" entry is replaced
-     by registry.existingSecret when the project brings its own pull secret. */}}
+     by registry.existingSecret when the project brings its own pull secret; when the
+     project's imagePullSecrets list does not reference it (e.g. a customized or empty
+     list), the existing secret is appended so it is never silently ignored.
+     Renders nothing when the resulting list is empty. */}}
 {{- define "shopsys.imagePullSecrets" -}}
 {{- $existing := (.Values.registry).existingSecret | default "" -}}
 {{- $list := list -}}
+{{- $covered := false -}}
 {{- range .Values.imagePullSecrets -}}
 {{- if and (eq . "dockerregistry") $existing -}}
 {{- $list = append $list (dict "name" $existing) -}}
+{{- $covered = true -}}
 {{- else -}}
 {{- $list = append $list (dict "name" .) -}}
+{{- if eq . $existing -}}
+{{- $covered = true -}}
 {{- end -}}
 {{- end -}}
+{{- end -}}
+{{- if and $existing (not $covered) -}}
+{{- $list = append $list (dict "name" $existing) -}}
+{{- end -}}
+{{- if $list -}}
 {{- toYaml $list -}}
+{{- end -}}
 {{- end }}
 
 {{/* Whether the http-auth secret / annotations are needed at all. Returns "1" or "". */}}
@@ -230,9 +243,10 @@ securityContext:
 priorityClassName: {{ . }}
 {{- end }}
 {{- if ne .pullSecrets false }}
-{{- if .root.Values.imagePullSecrets }}
+{{- $pullSecrets := include "shopsys.imagePullSecrets" .root }}
+{{- if $pullSecrets }}
 imagePullSecrets:
-  {{- include "shopsys.imagePullSecrets" .root | nindent 2 }}
+  {{- $pullSecrets | nindent 2 }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -56,8 +56,9 @@ spec:
               mountPath: /var/www/html/{{ .Values.app.domainsUrls.mountPath }}
               subPath: {{ .Values.app.domainsUrls.filename | quote }}
       restartPolicy: Never
-      {{- if .Values.imagePullSecrets }}
+      {{- $pullSecrets := include "shopsys.imagePullSecrets" . }}
+      {{- if $pullSecrets }}
       imagePullSecrets:
-        {{- include "shopsys.imagePullSecrets" . | nindent 8 }}
+        {{- $pullSecrets | nindent 8 }}
       {{- end }}
 {{- end }}

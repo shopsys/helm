@@ -27,7 +27,8 @@ Helm/Helmfile package.
    (see `environments/devel/values.yaml` in this repo).
 5. **Update CI**: replace the legacy deploy script invocation with
    `./deploy/deploy.sh <environment>`. Required env vars: `TAG`, `STOREFRONT_TAG`,
-   registry credentials and `RABBITMQ_DEFAULT_USER/PASS` (+ optional Slack vars). `FIRST_DEPLOY=1` for the first deploy of an instance.
+   registry credentials (not needed with `registry.existingSecret`) and
+   `RABBITMQ_DEFAULT_USER/PASS` (+ optional Slack vars). `FIRST_DEPLOY=1` for the first deploy of an instance.
 6. **One-time cleanup in the cluster** (first migration deploy only):
    - the kustomize-generated ConfigMaps (`domains-urls-<hash>`) become orphaned — delete them,
    - resources previously applied by `kubectl apply` are adopted by Helm on the first
