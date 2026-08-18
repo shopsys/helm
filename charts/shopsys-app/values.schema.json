@@ -81,6 +81,10 @@
           "type": "object",
           "additionalProperties": { "type": "string" }
         },
+        "secretEnv": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
         "envDefaults": {
           "type": "object",
           "additionalProperties": { "type": "string" }
@@ -100,6 +104,10 @@
       "type": "object",
       "properties": {
         "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "secretEnv": {
           "type": "object",
           "additionalProperties": { "type": "string" }
         }

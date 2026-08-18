@@ -14,8 +14,9 @@ Helm/Helmfile package.
    - `DOMAIN_HOSTNAME_*` GitLab variables → `domains:` in `environments/base.yaml`
      (or per environment) — committed, with git history,
    - `ENVIRONMENT_VARIABLES` / `STOREFRONT_ENVIRONMENT_VARIABLES` arrays → `app.env` /
-     `storefront.env` (secrets stay in CI variables, injected via
-     `environments/runtime.yaml.gotmpl` or `HELMFILE_EXTRA_ARGS`),
+     `storefront.env` for non-sensitive values and `app.secretEnv` / `storefront.secretEnv`
+     for passwords and tokens (rendered as Secrets; the actual secret values stay in CI
+     variables, injected via `environments/runtime.yaml.gotmpl` or `HELMFILE_EXTRA_ARGS`),
    - `CRON_INSTANCES` → `cron.instances`, `DEFAULT_CONSUMERS` → `consumers.instances`,
    - your `orchestration/kubernetes/configmap/nginx.yaml` → either delete it (the chart now
      ships a default equal to project-base's) or move customizations into
@@ -102,7 +103,13 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     `security.httpAuth.username/password` (the chart generates the htpasswd entry, bcrypt)
     or `security.httpAuth.existingSecret`; enabling auth without either fails the render.
     The website check reads the credentials from the deployed release values.
-19. **GCloud-specific registry branch removed** (`GCLOUD_DEPLOY` +
+19. **Sensitive values are delivered as Secrets**: `app.secretEnv` / `storefront.secretEnv`
+    render the `app-secret-env` / `storefront-secret-env` Secrets consumed via `envFrom`,
+    RabbitMQ credentials moved to the `rabbitmq-credentials` Secret (secretKeyRef), and cron
+    jobs source `/root/.project_secret_env.sh` from a Secret. Legacy rendered everything as
+    plain env values and appended passwords to the world-readable `cron-env` ConfigMap.
+    Single quotes in exported values are now escaped correctly (legacy bug).
+20. **GCloud-specific registry branch removed** (`GCLOUD_DEPLOY` +
     `GCLOUD_CONTAINER_REGISTRY_*`) — dropped upstream too (shopsys/deployment#77). The pull
     secret is registry-agnostic: set the generic `REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL`
     env vars (works with any registry — GCR/GAR via username `_json_key` and the service

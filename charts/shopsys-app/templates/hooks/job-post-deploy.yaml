@@ -38,6 +38,7 @@ spec:
               if ./phing -l 2>/dev/null | grep -q "build-deploy-part-3-non-blocking"; then
                 ./phing build-deploy-part-3-non-blocking || echo "[FAILED] build-deploy-part-3-non-blocking"
               fi
+          {{- include "shopsys.appEnvFrom" $ | nindent 10 }}
           env:
             {{- include "shopsys.appEnv" (dict "root" $) | nindent 12 }}
           {{- with .Values.deploy.postDeploy.resources }}

@@ -66,3 +66,30 @@ tests:
     asserts:
       - hasDocuments:
           count: 0
+
+  - it: sources the secret env file in crontab lines when secretEnv is set
+    template: templates/configmap-cron-list.yaml
+    set:
+      app:
+        secretEnv:
+          DATABASE_PASSWORD: "s3cret"
+      cron:
+        instances:
+          - name: cron
+            schedule: '*/5 * * * *'
+    asserts:
+      - matchRegex:
+          path: data.cron
+          pattern: '\. /root/\.project_env\.sh && \. /root/\.project_secret_env\.sh && cd'
+
+  - it: does not source the secret env file without secretEnv
+    template: templates/configmap-cron-list.yaml
+    set:
+      cron:
+        instances:
+          - name: cron
+            schedule: '*/5 * * * *'
+    asserts:
+      - notMatchRegex:
+          path: data.cron
+          pattern: 'project_secret_env'

@@ -90,3 +90,38 @@ tests:
       - matchRegex:
           path: data[".project_env.sh"]
           pattern: "export MAILER_FORCE_WHITELIST='false'"
+
+  - it: injects secretEnv via envFrom and keeps it out of plain env
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      app:
+        secretEnv:
+          DATABASE_PASSWORD: "s3cret"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: app-secret-env
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DATABASE_PASSWORD
+            value: "s3cret"
+
+  - it: has no envFrom without secretEnv
+    template: templates/deployment-webserver-php-fpm.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+
+  - it: escapes single quotes in cron-env exports
+    template: templates/configmap-cron-env.yaml
+    set:
+      app:
+        env:
+          MAILER_DSN: "smtp://user:it's@host"
+    asserts:
+      - matchRegex:
+          path: data[".project_env.sh"]
+          pattern: "export MAILER_DSN='smtp://user:it'\\\\''s@host'"

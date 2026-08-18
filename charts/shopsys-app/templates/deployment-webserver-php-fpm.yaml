@@ -80,6 +80,7 @@ spec:
                   - sh
                   - '-c'
                   - sleep 10 && kill -SIGQUIT 1
+          {{- include "shopsys.appEnvFrom" $ | nindent 10 }}
           env:
             {{- include "shopsys.appEnv" (dict "root" $ "component" .Values.webserver) | nindent 12 }}
           volumeMounts:

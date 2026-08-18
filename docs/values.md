@@ -66,14 +66,16 @@ registry:                    # image pull secret; credentials sensitive → env 
   existingSecret: ""         # OR reference an externally managed pull secret
 
 app:                         # shared backend configuration
-  env: {}                    # backend env vars (webserver, cron, consumers, migration)
+  env: {}                    # non-sensitive backend env vars (webserver, cron, consumers, migration)
+  secretEnv: {}              # sensitive backend env vars → app-secret-env Secret + envFrom;
+                             #   cron jobs source them from the mounted .project_secret_env.sh
   envDefaults: { MAILER_FORCE_WHITELIST: "false" }
   domainsUrls: { filename, mountPath }
   adminUrl: admin
   s3Endpoint: ""
 
 webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers
-storefront:                  # component + its own `env`
+storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret)
 cron:                        # component + `instances: [{name, schedule}]`
 consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`
 redis:                       # infra component + `config` (redis.conf)
@@ -89,8 +91,11 @@ deploy:
 extraManifests: []           # raw manifests (rendered through tpl) — escape hatch
 ```
 
-**Important:** `app.env`, `app.envDefaults` and `storefront.env` values must be **strings**
-(quote everything: `SENTRY_RELEASE: "479411e7"`). This is enforced by `values.schema.json`.
+**Important:** `app.env`, `app.secretEnv`, `app.envDefaults`, `storefront.env` and
+`storefront.secretEnv` values must be **strings** (quote everything:
+`SENTRY_RELEASE: "479411e7"`). This is enforced by `values.schema.json`. Explicit `env`
+entries take precedence over `envFrom` in Kubernetes — never define the same key in both
+`env` and `secretEnv`.
 
 Lists (e.g. `security.whitelistIps`, `domains`) **replace** the base value when overridden by
 an environment file — they are not merged. Maps merge deeply.
@@ -116,8 +121,8 @@ an environment file — they are not merged. Maps merge deeply.
 | `RABBITMQ_DOMAIN_HOSTNAME` / `RABBITMQ_IP_WHITELIST` | `rabbitmq.management.hostname` / `.ipWhitelist` |
 | `REDIS_VERSION` | `redis.image` |
 | `ADMIN_URL` / `S3_ENDPOINT` | `app.adminUrl` / `app.s3Endpoint` (used by the default nginx vhost) |
-| `ENVIRONMENT_VARIABLES` array | `app.env` |
-| `STOREFRONT_ENVIRONMENT_VARIABLES` array | `storefront.env` |
+| `ENVIRONMENT_VARIABLES` array | `app.env` (non-sensitive) + `app.secretEnv` (passwords, tokens — rendered as a Secret) |
+| `STOREFRONT_ENVIRONMENT_VARIABLES` array | `storefront.env` + `storefront.secretEnv` |
 | `CRON_INSTANCES` array | `cron.instances` |
 | `DEFAULT_CONSUMERS` array | `consumers.instances` |
 | `DISPLAY_FINAL_CONFIGURATION`, `DISABLE_WEBSITE_RUNNING_CHECK`, Slack vars | stay env vars of the deploy wrapper |

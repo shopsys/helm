@@ -13,6 +13,22 @@ metadata:
     helm.sh/chart: shopsys-infra-1.0.0
 
 ---
+# Source: shopsys-infra/templates/secret-rabbitmq.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-credentials
+  labels:
+    app.kubernetes.io/name: shopsys-infra
+    app.kubernetes.io/instance: shopsys-infra
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-infra-1.0.0
+type: Opaque
+stringData:
+  user: "rabbitmq"
+  password: "rabbitmq-password"
+
+---
 # Source: shopsys-infra/templates/configmap-redis-health.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -265,6 +281,9 @@ spec:
       app: rabbitmq
   template:
     metadata:
+      annotations:
+        # Roll the pod when the credentials change (a secretKeyRef alone does not)
+        checksum/rabbitmq-credentials: 3aa8bc1a65ea72cfc71f504a91952b46415de01c987c90fcad0ccf81f3819f1d
       labels:
         app: rabbitmq
     spec:
@@ -295,9 +314,15 @@ spec:
               protocol: TCP
           env:
             - name: RABBITMQ_DEFAULT_USER
-              value: "rabbitmq"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: user
             - name: RABBITMQ_DEFAULT_PASS
-              value: "rabbitmq-password"
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: password
           resources:
             requests:
               cpu: 20m
@@ -351,6 +376,42 @@ spec:
             pathType: Prefix
 
 ---
+# Source: shopsys-app/templates/secret-app-env.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secret-env
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+type: Opaque
+stringData:
+  APP_SECRET: "test-app-secret-key"
+  DATABASE_PASSWORD: "test-db-password"
+  S3_SECRET: "test-s3-secret"
+
+---
+# Source: shopsys-app/templates/secret-app-env.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cron-secret-env
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+type: Opaque
+stringData:
+  .project_secret_env.sh: |
+    
+    export APP_SECRET='test-app-secret-key'
+    export DATABASE_PASSWORD='test-db-password'
+    export S3_SECRET='test-s3-secret'
+
+---
 # Source: shopsys-app/templates/secret-dockerregistry.yaml
 apiVersion: v1
 kind: Secret
@@ -379,10 +440,8 @@ metadata:
 data:
   .project_env.sh: |+
     
-    export APP_SECRET='test-app-secret-key'
     export DATABASE_HOST='10.0.0.100'
     export DATABASE_NAME='myproject-production'
-    export DATABASE_PASSWORD='test-db-password'
     export DATABASE_PORT='5432'
     export DATABASE_USER='myproject-production'
     export ELASTICSEARCH_HOST='http://elasticsearch:9200'
@@ -394,7 +453,6 @@ data:
     export S3_ACCESS_KEY='myproject-production'
     export S3_BUCKET_NAME='myproject-production'
     export S3_ENDPOINT='https://s3.example.com'
-    export S3_SECRET='test-s3-secret'
     export SENTRY_RELEASE='479411e7'
     export TRUSTED_PROXY='10.0.0.0/8'
 
@@ -412,7 +470,7 @@ metadata:
 data:
   cron: |+
     PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    */5 * * * * . /root/.project_env.sh && cd /var/www/html/ && ./phing cron > /dev/null 2>&1
+    */5 * * * * . /root/.project_env.sh && . /root/.project_secret_env.sh && cd /var/www/html/ && ./phing cron > /dev/null 2>&1
     
 
 ---
@@ -877,7 +935,7 @@ spec:
         project/name: "myproject"
         
         checksum/domains-urls: 6e0bbf6b4dbff26e8393ed633d2fd5487eb046effb22d6d7c851910aa5628ca7
-        checksum/app-env: f8769e80c44f3b67987fff72636d611b173c518cee28f6e16910cd8b8975e209
+        checksum/app-env: 6b56306f5c1dfeeab349a0ba062350bd679a4d752d5a6e58e7dd592330afab21
       labels:
         app: consumer-email
     spec:
@@ -932,16 +990,16 @@ spec:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "touch /tmp/stop_consumer && php bin/console messenger:stop-workers"]
+          
+          envFrom:
+            - secretRef:
+                name: app-secret-env
           env:
             
-            - name: APP_SECRET
-              value: "test-app-secret-key"
             - name: DATABASE_HOST
               value: "10.0.0.100"
             - name: DATABASE_NAME
               value: "myproject-production"
-            - name: DATABASE_PASSWORD
-              value: "test-db-password"
             - name: DATABASE_PORT
               value: "5432"
             - name: DATABASE_USER
@@ -964,8 +1022,6 @@ spec:
               value: "myproject-production"
             - name: S3_ENDPOINT
               value: "https://s3.example.com"
-            - name: S3_SECRET
-              value: "test-s3-secret"
             - name: SENTRY_RELEASE
               value: "479411e7"
             - name: TRUSTED_PROXY
@@ -1011,7 +1067,7 @@ spec:
         project/name: "myproject"
         
         checksum/domains-urls: 6e0bbf6b4dbff26e8393ed633d2fd5487eb046effb22d6d7c851910aa5628ca7
-        checksum/cron: 8cd0b3cffabac6697e696c0779223bbcd8e23c711bf643249affba51c90034af
+        checksum/cron: cc400e4effec5b196effb166f62dfec2bb0208c47cdbf1f7c208806e40719e25
       labels:
         app: cron
         # Forces a fresh cron pod on every deploy (legacy `date` label)
@@ -1045,6 +1101,9 @@ spec:
         - name: cron-env
           configMap:
             name: cron-env
+        - name: cron-secret-env
+          secret:
+            secretName: cron-secret-env
         - name: fe-api-keys-volume
           secret:
             secretName: fe-api-keys
@@ -1067,16 +1126,16 @@ spec:
                   - /bin/sh
                   - '-c'
                   - "cd /var/www/html && (./phing -S cron-lock > /dev/null 2>&1 &) && ./phing -S cron-watch"
+          
+          envFrom:
+            - secretRef:
+                name: app-secret-env
           env:
             
-            - name: APP_SECRET
-              value: "test-app-secret-key"
             - name: DATABASE_HOST
               value: "10.0.0.100"
             - name: DATABASE_NAME
               value: "myproject-production"
-            - name: DATABASE_PASSWORD
-              value: "test-db-password"
             - name: DATABASE_PORT
               value: "5432"
             - name: DATABASE_USER
@@ -1099,8 +1158,6 @@ spec:
               value: "myproject-production"
             - name: S3_ENDPOINT
               value: "https://s3.example.com"
-            - name: S3_SECRET
-              value: "test-s3-secret"
             - name: SENTRY_RELEASE
               value: "479411e7"
             - name: TRUSTED_PROXY
@@ -1115,6 +1172,9 @@ spec:
             - name: cron-env
               mountPath: /root/.project_env.sh
               subPath: .project_env.sh
+            - name: cron-secret-env
+              mountPath: /root/.project_secret_env.sh
+              subPath: .project_secret_env.sh
             - name: fe-api-keys-volume
               readOnly: true
               mountPath: /var/www/html/config/frontend-api
@@ -1241,7 +1301,7 @@ spec:
         project/name: "myproject"
         
         checksum/domains-urls: 6e0bbf6b4dbff26e8393ed633d2fd5487eb046effb22d6d7c851910aa5628ca7
-        checksum/app-env: f8769e80c44f3b67987fff72636d611b173c518cee28f6e16910cd8b8975e209
+        checksum/app-env: 6b56306f5c1dfeeab349a0ba062350bd679a4d752d5a6e58e7dd592330afab21
         checksum/nginx: 2a337c95c4e6f4f45049d13f9cfc230bda2962d02deed97a0cb0fb0305a1793c
         checksum/php-fpm: 593102a5f1a5dc7c7a19ee1aae7bd32f6ee7011a0ed0ea732f25f8b2a8251ca7
       labels:
@@ -1323,16 +1383,16 @@ spec:
                   - sh
                   - '-c'
                   - sleep 10 && kill -SIGQUIT 1
+          
+          envFrom:
+            - secretRef:
+                name: app-secret-env
           env:
             
-            - name: APP_SECRET
-              value: "test-app-secret-key"
             - name: DATABASE_HOST
               value: "10.0.0.100"
             - name: DATABASE_NAME
               value: "myproject-production"
-            - name: DATABASE_PASSWORD
-              value: "test-db-password"
             - name: DATABASE_PORT
               value: "5432"
             - name: DATABASE_USER
@@ -1355,8 +1415,6 @@ spec:
               value: "myproject-production"
             - name: S3_ENDPOINT
               value: "https://s3.example.com"
-            - name: S3_SECRET
-              value: "test-s3-secret"
             - name: SENTRY_RELEASE
               value: "479411e7"
             - name: TRUSTED_PROXY
@@ -1684,16 +1742,16 @@ spec:
         - name: migrate-application
           image: "v1.0.0"
           command: ["sh", "-c", "cd /var/www/html && ./phing -verbose db-migrations-count-with-maintenance build-deploy-part-2-db-dependent"]
+          
+          envFrom:
+            - secretRef:
+                name: app-secret-env
           env:
             
-            - name: APP_SECRET
-              value: "test-app-secret-key"
             - name: DATABASE_HOST
               value: "10.0.0.100"
             - name: DATABASE_NAME
               value: "myproject-production"
-            - name: DATABASE_PASSWORD
-              value: "test-db-password"
             - name: DATABASE_PORT
               value: "5432"
             - name: DATABASE_USER
@@ -1716,8 +1774,6 @@ spec:
               value: "myproject-production"
             - name: S3_ENDPOINT
               value: "https://s3.example.com"
-            - name: S3_SECRET
-              value: "test-s3-secret"
             - name: SENTRY_RELEASE
               value: "479411e7"
             - name: TRUSTED_PROXY
@@ -1768,16 +1824,16 @@ spec:
               if ./phing -l 2>/dev/null | grep -q "build-deploy-part-3-non-blocking"; then
                 ./phing build-deploy-part-3-non-blocking || echo "[FAILED] build-deploy-part-3-non-blocking"
               fi
+          
+          envFrom:
+            - secretRef:
+                name: app-secret-env
           env:
             
-            - name: APP_SECRET
-              value: "test-app-secret-key"
             - name: DATABASE_HOST
               value: "10.0.0.100"
             - name: DATABASE_NAME
               value: "myproject-production"
-            - name: DATABASE_PASSWORD
-              value: "test-db-password"
             - name: DATABASE_PORT
               value: "5432"
             - name: DATABASE_USER
@@ -1800,8 +1856,6 @@ spec:
               value: "myproject-production"
             - name: S3_ENDPOINT
               value: "https://s3.example.com"
-            - name: S3_SECRET
-              value: "test-s3-secret"
             - name: SENTRY_RELEASE
               value: "479411e7"
             - name: TRUSTED_PROXY

@@ -10,15 +10,12 @@ security:
     enabled: true
 app:
   env:
-    APP_SECRET: "test-app-secret-key"
     DATABASE_HOST: "10.0.0.100"
     DATABASE_NAME: "myproject-cloudflare-dev"
     DATABASE_PORT: "5432"
     DATABASE_USER: "myproject-cloudflare-dev"
-    DATABASE_PASSWORD: "test-db-password"
     S3_ENDPOINT: "https://s3.example.com"
     S3_ACCESS_KEY: "myproject-cloudflare-dev"
-    S3_SECRET: "test-s3-secret"
     S3_BUCKET_NAME: "myproject-cloudflare-dev"
     ELASTICSEARCH_HOST: "http://elasticsearch:9200"
     ELASTIC_SEARCH_INDEX_PREFIX: "myproject-cloudflare-dev"
@@ -27,6 +24,10 @@ app:
     TRUSTED_PROXY: "10.0.0.0/8"
     MESSENGER_TRANSPORT_DSN: "amqp://guest:guest@rabbitmq:5672/%2f/messages"
   s3Endpoint: "https://s3.example.com"
+  secretEnv:
+    APP_SECRET: "test-app-secret-key"
+    DATABASE_PASSWORD: "test-db-password"
+    S3_SECRET: "test-s3-secret"
 cron:
   instances:
     - name: cron

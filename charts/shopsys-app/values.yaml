@@ -68,6 +68,11 @@ app:
   # Backend environment variables (webserver, cron, consumers, migration job, cron shell).
   # Values MUST be strings - quote values like "479411e7" in YAML.
   env: {}
+  # Sensitive backend variables - rendered as the app-secret-env Secret and injected via
+  # envFrom (never as plain values in pod specs or ConfigMaps). Cron jobs source them from
+  # the mounted .project_secret_env.sh. Values must be strings. NOTE: explicit env entries
+  # take precedence over envFrom - do not define a key in both env and secretEnv.
+  secretEnv: {}
   # Chart-provided defaults; environment overlays override them (dev sets "true").
   envDefaults:
     MAILER_FORCE_WHITELIST: "false"
@@ -192,6 +197,8 @@ storefront:
     tag: ""
     pullPolicy: ""
   env: {}                # storefront environment variables (values must be strings)
+  # Sensitive storefront variables - rendered as the storefront-secret-env Secret (envFrom)
+  secretEnv: {}
   replicas: 1
   autoscaling:
     enabled: false

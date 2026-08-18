@@ -45,6 +45,7 @@ spec:
         - name: migrate-application
           image: {{ include "shopsys.image" .Values.webserver.image | quote }}
           command: ["sh", "-c", {{ $command | quote }}]
+          {{- include "shopsys.appEnvFrom" $ | nindent 10 }}
           env:
             {{- include "shopsys.appEnv" (dict "root" $) | nindent 12 }}
           {{- with .Values.deploy.migration.resources }}

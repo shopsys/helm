@@ -100,7 +100,9 @@ per-domain website check (domain URLs + auth state are parsed from the rendered 
   terminationGracePeriodSeconds, priorityClassName). Keep new features consistent with this.
 - Autoscaling is per component (`webserver.autoscaling`, `storefront.autoscaling`);
   `replicas` is omitted from the Deployment when autoscaling is enabled.
-- `app.env`, `app.envDefaults`, `storefront.env` values MUST be strings (schema-enforced);
+- `app.env`, `app.secretEnv`, `app.envDefaults`, `storefront.env`, `storefront.secretEnv`
+  values MUST be strings (schema-enforced); sensitive keys belong in `secretEnv` (rendered
+  as Secrets + envFrom), never in `env`;
   env rendering quotes everything (`| toString | quote`) — this is the escaping parity with
   the legacy `escaping-env` scenario (`"479411e7"` must stay a string).
 - Lists in values (domains, whitelistIps) REPLACE on override; maps merge deeply.

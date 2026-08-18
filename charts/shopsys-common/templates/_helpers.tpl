@@ -174,6 +174,18 @@ project/name: {{ .root.Values.project.name | quote }}
 {{- end }}
 {{- end }}
 
+{{/* envFrom block injecting the sensitive backend variables (app.secretEnv).
+     Rendered at zero indent - use `| nindent N` at the call site.
+     NOTE: explicit `env` entries take precedence over envFrom in Kubernetes,
+     so a key defined in both app.env and app.secretEnv resolves to app.env. */}}
+{{- define "shopsys.appEnvFrom" -}}
+{{- if .Values.app.secretEnv }}
+envFrom:
+  - secretRef:
+      name: app-secret-env
+{{- end }}
+{{- end }}
+
 {{/* Content of the domains_urls file mounted into application pods. */}}
 {{- define "shopsys.domainsUrls.data" -}}
 domains_urls:
@@ -183,20 +195,37 @@ domains_urls:
 {{- end }}
 {{- end }}
 
-{{/* Content of the cron-env .project_env.sh (exports for cron shell). */}}
-{{- define "shopsys.cronEnv.data" -}}
-{{- range $key, $value := (include "shopsys.appEnvMap" . | fromYaml) }}
+{{/* Render a map as shell export lines. Empty values are skipped; single quotes in
+     values are escaped POSIX-style ('\'') so sourcing the file never breaks. */}}
+{{- define "shopsys.exportLines" -}}
+{{- range $key, $value := . }}
 {{- if ne (toString $value) "" }}
-export {{ $key }}='{{ $value }}'
+export {{ $key }}='{{ $value | toString | replace "'" "'\\''" }}'
 {{- end }}
 {{- end }}
 {{- end }}
 
-{{/* Content of the cron-list crontab template. */}}
+{{/* Content of the cron-env .project_env.sh (non-sensitive exports for the cron shell). */}}
+{{- define "shopsys.cronEnv.data" -}}
+{{- include "shopsys.exportLines" (include "shopsys.appEnvMap" . | fromYaml) -}}
+{{- end }}
+
+{{/* Content of the .project_secret_env.sh sourced by cron jobs (sensitive exports,
+     delivered via the app-secret-env Secret). */}}
+{{- define "shopsys.cronSecretEnv.data" -}}
+{{- include "shopsys.exportLines" (.Values.app.secretEnv | default dict) -}}
+{{- end }}
+
+{{/* Content of the cron-list crontab template. Cron jobs source the secret env file
+     only when sensitive variables are defined. */}}
 {{- define "shopsys.cronList.data" -}}
+{{- $secretSource := "" -}}
+{{- if .Values.app.secretEnv -}}
+{{- $secretSource = ". /root/.project_secret_env.sh && " -}}
+{{- end -}}
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 {{- range .Values.cron.instances }}
-{{ .schedule }} . /root/.project_env.sh && cd /var/www/html/ && ./phing {{ .name }} > /dev/null 2>&1
+{{ .schedule }} . /root/.project_env.sh && {{ $secretSource }}cd /var/www/html/ && ./phing {{ .name }} > /dev/null 2>&1
 {{- end }}
 {{ end }}
 
@@ -208,9 +237,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 {{- if eq . "domainsUrls" }}
 checksum/domains-urls: {{ include "shopsys.domainsUrls.data" $root | sha256sum }}
 {{- else if eq . "appEnv" }}
-checksum/app-env: {{ include "shopsys.appEnvMap" $root | sha256sum }}
+checksum/app-env: {{ printf "%s%s" (include "shopsys.appEnvMap" $root) (toYaml ($root.Values.app.secretEnv | default dict)) | sha256sum }}
 {{- else if eq . "cron" }}
-checksum/cron: {{ printf "%s%s" (include "shopsys.cronList.data" $root) (include "shopsys.cronEnv.data" $root) | sha256sum }}
+checksum/cron: {{ printf "%s%s%s" (include "shopsys.cronList.data" $root) (include "shopsys.cronEnv.data" $root) (include "shopsys.cronSecretEnv.data" $root) | sha256sum }}
 {{- else if eq . "nginx" }}
 checksum/nginx: {{ printf "%s%s" (include "shopsys.nginxConf" $root) (include "shopsys.projectNginxConf" $root) | sha256sum }}
 {{- else if eq . "phpFpm" }}

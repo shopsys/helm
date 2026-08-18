@@ -67,6 +67,7 @@ spec:
             preStop:
               exec:
                 command: ["/bin/sh", "-c", "touch /tmp/stop_consumer && php bin/console messenger:stop-workers"]
+          {{- include "shopsys.appEnvFrom" $ | nindent 10 }}
           env:
             {{- include "shopsys.appEnv" (dict "root" $ "component" $consumer) | nindent 12 }}
           {{- with $consumer.resources }}
