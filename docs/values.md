@@ -102,7 +102,7 @@ an environment file — they are not merged. Maps merge deeply.
 | `FIRST_DEPLOY` / `FIRST_DEPLOY_LOAD_DEMO_DATA` | env vars → `deploy.firstDeploy.*` (runtime.yaml.gotmpl) |
 | `ENABLE_AUTOSCALING`, `MIN/MAX_*_REPLICAS` | `webserver.autoscaling` + `storefront.autoscaling` (independent) |
 | `PHP_FPM_CPU_REQUEST` / `STOREFRONT_CPU_REQUEST` / `DOWNSCALE_RESOURCE` | `*.resources.requests` in environment values |
-| `DEPLOY_REGISTER_USER/PASSWORD`, `CI_REGISTRY`, `GCLOUD_*` | env vars → `registry.*` (runtime.yaml.gotmpl) |
+| `DEPLOY_REGISTER_USER/PASSWORD`, `CI_REGISTRY` | env vars → `registry.*` (runtime.yaml.gotmpl); generic `REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL` take precedence and work with any registry (GCR/GAR: username `_json_key`, password = service account JSON) |
 | `BASIC_AUTH_PATH` | env var → `security.httpAuth.htpasswd` (runtime.yaml.gotmpl) |
 | `WHITELIST_IPS` + `DEFAULT_WHITELIST_IPS` | `security.whitelistIps` (single committed list) |
 | `FORCE_HTTP_AUTH_IN_PRODUCTION` | `domains[].forceHttpAuth` |

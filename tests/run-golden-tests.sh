@@ -64,7 +64,6 @@ export RABBITMQ_DEFAULT_PASS="rabbitmq-password"
 export BASIC_AUTH_PATH="${SCRIPT_DIR}/fixtures/basicHttpAuth"
 # Frozen timestamp for deterministic output (legacy FREEZE_TIMESTAMP)
 export DEPLOY_TIMESTAMP="1234567890"
-unset GCLOUD_DEPLOY
 
 render_variant() {
     local env_name="$1" output_file="$2" first_deploy="$3" demo_data="$4"

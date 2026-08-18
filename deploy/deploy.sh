@@ -19,7 +19,8 @@
 #
 # Environment variables consumed here and by environments/runtime.yaml.gotmpl:
 #   TAG, STOREFRONT_TAG                      application images (full references)
-#   CI_REGISTRY, DEPLOY_REGISTER_USER/PASSWORD  or GCLOUD_DEPLOY + GCLOUD_* registry credentials
+#   REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL  registry credentials (any registry);
+#     GitLab fallback: CI_REGISTRY + DEPLOY_REGISTER_USER/PASSWORD
 #   RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS
 #   BASIC_AUTH_PATH                          htpasswd file for HTTP basic auth
 #   FIRST_DEPLOY, FIRST_DEPLOY_LOAD_DEMO_DATA
