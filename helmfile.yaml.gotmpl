@@ -1,0 +1,53 @@
+{{/*
+Shopsys Platform deployment helmfile.
+
+Usage: helmfile -e <environment> apply
+Environments are NOT enumerated here - any environment name works as long as
+<envDir>/<environment>/values.yaml exists. Values are layered:
+  chart defaults -> <envDir>/base.yaml -> <envDir>/<environment>/values.yaml -> runtime env vars
+
+SHOPSYS_ENV_DIR overrides the environments directory (used by the golden test suite).
+*/}}
+{{- $envDir := env "SHOPSYS_ENV_DIR" | default "environments" }}
+
+environments:
+  {{ .Environment.Name }}:
+    values:
+      - {{ $envDir }}/base.yaml
+      - {{ $envDir }}/{{ .Environment.Name }}/values.yaml
+      - environments/runtime.yaml.gotmpl
+
+---
+
+{{- $namespace := printf "%s-%s" .Values.project.name .Environment.Name }}
+
+releases:
+  # Infrastructure services - installed and ready BEFORE the application release,
+  # which lets the migrate-application hook run as pre-install on the very first deploy.
+  - name: shopsys-infra
+    namespace: {{ $namespace }}
+    createNamespace: true
+    chart: ./charts/shopsys-infra
+    wait: true
+    timeout: {{ env "INFRA_TIMEOUT" | default 900 }}
+    values:
+      - {{ toYaml .Values | nindent 8 }}
+      - project:
+          environment: {{ .Environment.Name | quote }}
+
+  # The application itself. Hook order within one apply:
+  #   cron-suspend (pre-upgrade) -> migrate-application (pre-install/pre-upgrade)
+  #   -> manifests + wait for rollout -> post-deploy (post-install/post-upgrade)
+  - name: shopsys-app
+    namespace: {{ $namespace }}
+    createNamespace: true
+    chart: ./charts/shopsys-app
+    needs:
+      - {{ $namespace }}/shopsys-infra
+    wait: true
+    waitForJobs: true
+    timeout: {{ env "DEPLOY_TIMEOUT" | default 2700 }}
+    values:
+      - {{ toYaml .Values | nindent 8 }}
+      - project:
+          environment: {{ .Environment.Name | quote }}

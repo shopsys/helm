@@ -1,0 +1,119 @@
+# Values reference
+
+Configuration lives in **committed values files** layered per environment:
+
+```
+chart defaults (charts/*/values.yaml)
+  → environments/base.yaml                 shared by all environments
+    → environments/<name>/values.yaml     one file per environment (any number of them)
+      → environments/runtime.yaml.gotmpl  CI-dynamic + sensitive values from env vars
+```
+
+Run with `helmfile -e <name> apply` (or `./deploy/deploy.sh <name>`). Environment names are
+not enumerated anywhere — creating `environments/staging/values.yaml` is all it takes to add
+a `staging` environment.
+
+## Standard component keys
+
+Every workload component (`webserver`, `storefront`, `cron`, `consumers.defaults` /
+`consumers.instances[]`, `redis`, `rabbitmq`) accepts the same standard keys:
+
+| Key | Purpose |
+|---|---|
+| `image: {repository, tag, pullPolicy}` | container image; when `tag` is empty, `repository` is used as a complete reference (this is how CI passes `TAG`) |
+| `replicas` | desired replicas (omitted from the manifest when `autoscaling.enabled`) |
+| `autoscaling: {enabled, minReplicas, maxReplicas, targetCPUUtilization}` | per-component HPA (webserver + storefront) |
+| `resources` | container resources |
+| `podAnnotations` / `podLabels` | extra pod metadata |
+| `nodeSelector` / `tolerations` / `affinity` / `priorityClassName` | scheduling |
+| `extraEnv` | extra env entries (raw list, supports `valueFrom`) |
+| `extraVolumes` / `extraVolumeMounts` | additional volumes |
+| `livenessProbe` / `readinessProbe` | probe overrides |
+| `securityContext` / `podSecurityContext` | security contexts |
+| `terminationGracePeriodSeconds`, `lifecycle` | shutdown behavior |
+
+## Top-level structure
+
+```yaml
+project:
+  name: myproject            # namespace = <name>-<environment>
+
+domains:                     # ordered; index 0 was DOMAIN_HOSTNAME_1
+  - hostname: www.example.com   # "example.com/en" = path-based domain
+    forceHttpAuth: false        # basic auth for this domain even in production
+    cloudflareExcluded: false
+    extraAnnotations: {}
+
+ingress:
+  className: nginx
+  clusterIssuer: letsencrypt-prod
+  proxyBodySize: 32m
+  extraAnnotations: {}
+
+security:
+  httpAuth:
+    enabled: false           # dev environments: true (former RUNNING_PRODUCTION=0)
+    htpasswd: ""             # sensitive → BASIC_AUTH_PATH env var
+  whitelistIps: []           # IPs bypassing basic auth
+  cloudflare: { enabled: false }
+  mcp: { enabled: true, ipWhitelist: [] }
+  feApiKeys: {}              # optional declarative keypair
+
+registry: {...}              # image pull secret; sensitive → env vars
+
+app:                         # shared backend configuration
+  env: {}                    # backend env vars (webserver, cron, consumers, migration)
+  envDefaults: { MAILER_FORCE_WHITELIST: "false" }
+  domainsUrls: { filename, mountPath }
+  adminUrl: admin
+  s3Endpoint: ""
+
+webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers
+storefront:                  # component + its own `env`
+cron:                        # component + `instances: [{name, schedule}]`
+consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`
+redis:                       # infra component + `config` (redis.conf)
+rabbitmq:                    # infra component + auth/persistence/management
+
+deploy:
+  timestamp: ""              # injected by the wrapper (forces a new cron pod)
+  firstDeploy: { enabled: false, loadDemoData: false }
+  migration: { enabled, targets: {continuous, firstDeploy, firstDeployWithDemoData}, resources }
+  postDeploy: { enabled, resources }
+  hooks: { kubectlImage, serviceAccountName }
+
+extraManifests: []           # raw manifests (rendered through tpl) — escape hatch
+```
+
+**Important:** `app.env`, `app.envDefaults` and `storefront.env` values must be **strings**
+(quote everything: `SENTRY_RELEASE: "479411e7"`). This is enforced by `values.schema.json`.
+
+Lists (e.g. `security.whitelistIps`, `domains`) **replace** the base value when overridden by
+an environment file — they are not merged. Maps merge deeply.
+
+## Legacy env var → values mapping
+
+| Legacy env var | New location |
+|---|---|
+| `PROJECT_NAME` | `project.name` + environment name (namespace = `<name>-<env>`) |
+| `TAG` / `STOREFRONT_TAG` | env var → `webserver.image.repository` / `storefront.image.repository` (runtime.yaml.gotmpl) |
+| `DOMAIN_HOSTNAME_N` | `domains[]` (committed) |
+| `RUNNING_PRODUCTION=0` | environment overlay: `security.httpAuth.enabled: true`, `app.envDefaults.MAILER_FORCE_WHITELIST: "true"`, downscaled resources, HPA min=max |
+| `FIRST_DEPLOY` / `FIRST_DEPLOY_LOAD_DEMO_DATA` | env vars → `deploy.firstDeploy.*` (runtime.yaml.gotmpl) |
+| `ENABLE_AUTOSCALING`, `MIN/MAX_*_REPLICAS` | `webserver.autoscaling` + `storefront.autoscaling` (independent) |
+| `PHP_FPM_CPU_REQUEST` / `STOREFRONT_CPU_REQUEST` / `DOWNSCALE_RESOURCE` | `*.resources.requests` in environment values |
+| `DEPLOY_REGISTER_USER/PASSWORD`, `CI_REGISTRY`, `GCLOUD_*` | env vars → `registry.*` (runtime.yaml.gotmpl) |
+| `BASIC_AUTH_PATH` | env var → `security.httpAuth.htpasswd` (runtime.yaml.gotmpl) |
+| `WHITELIST_IPS` + `DEFAULT_WHITELIST_IPS` | `security.whitelistIps` (single committed list) |
+| `FORCE_HTTP_AUTH_IN_PRODUCTION` | `domains[].forceHttpAuth` |
+| `USING_CLOUDFLARE` / `CLOUDFLARE_EXCLUDED_DOMAINS` | `security.cloudflare.enabled` / `domains[].cloudflareExcluded` |
+| `MCP_INGRESS_ENABLED` / `MCP_IP_WHITELIST` | `security.mcp.enabled` / `security.mcp.ipWhitelist` |
+| `RABBITMQ_DEFAULT_USER/PASS` | env vars → `rabbitmq.auth.*` (runtime.yaml.gotmpl) |
+| `RABBITMQ_DOMAIN_HOSTNAME` / `RABBITMQ_IP_WHITELIST` | `rabbitmq.management.hostname` / `.ipWhitelist` |
+| `REDIS_VERSION` | `redis.image` |
+| `ADMIN_URL` / `S3_ENDPOINT` | `app.adminUrl` / `app.s3Endpoint` (used by the default nginx vhost) |
+| `ENVIRONMENT_VARIABLES` array | `app.env` |
+| `STOREFRONT_ENVIRONMENT_VARIABLES` array | `storefront.env` |
+| `CRON_INSTANCES` array | `cron.instances` |
+| `DEFAULT_CONSUMERS` array | `consumers.instances` |
+| `DISPLAY_FINAL_CONFIGURATION`, `HTTP_AUTH_CREDENTIALS`, `DISABLE_WEBSITE_RUNNING_CHECK`, Slack vars | stay env vars of the deploy wrapper |

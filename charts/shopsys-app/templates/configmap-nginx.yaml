@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-default-config
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+data:
+  nginx.conf: |
+    {{- include "shopsys.nginxConf" . | nindent 4 }}
+  project-nginx.conf: |
+    {{- include "shopsys.projectNginxConf" . | nindent 4 }}

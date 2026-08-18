@@ -1,0 +1,1 @@
+Standard production deployment with two domains and email consumer

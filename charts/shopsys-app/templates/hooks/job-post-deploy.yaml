@@ -1,0 +1,58 @@
+{{- /*
+Post-deploy tasks executed after the new application version is rolled out
+(legacy steps 19-22 of deploy.sh, previously kubectl exec into the webserver pod):
+- maintenance-off is blocking: its failure fails the Job and thus the deploy (ERROR semantics)
+- cache cleanups and the non-blocking phase only log a [FAILED] warning (FAILED semantics)
+*/}}
+{{- if .Values.deploy.postDeploy.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: post-deploy
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      volumes:
+        - name: domains-urls
+          configMap:
+            name: domains-urls-hook
+      containers:
+        - name: post-deploy
+          image: {{ include "shopsys.image" .Values.webserver.image | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              cd /var/www/html
+              ./phing maintenance-off
+              ./phing clean-redis-old || echo "[FAILED] clean-redis-old"
+              ./phing clean-redis-storefront || echo "[FAILED] clean-redis-storefront"
+              if ./phing -l 2>/dev/null | grep -q "build-deploy-part-3-non-blocking"; then
+                ./phing build-deploy-part-3-non-blocking || echo "[FAILED] build-deploy-part-3-non-blocking"
+              fi
+          env:
+            {{- include "shopsys.appEnv" (dict "root" $) | nindent 12 }}
+          {{- with .Values.deploy.postDeploy.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: domains-urls
+              mountPath: /var/www/html/{{ .Values.app.domainsUrls.mountPath }}
+              subPath: {{ .Values.app.domainsUrls.filename | quote }}
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+{{- end }}

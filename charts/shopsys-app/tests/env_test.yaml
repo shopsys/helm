@@ -1,0 +1,92 @@
+suite: environment variable rendering
+values:
+  - ./values/required.yaml
+templates:
+  - templates/deployment-webserver-php-fpm.yaml
+  - templates/deployment-storefront.yaml
+  - templates/configmap-cron-env.yaml
+tests:
+  - it: keeps hexadecimal-looking values as strings (escaping parity)
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      app:
+        env:
+          SENTRY_RELEASE: "479411e7"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: SENTRY_RELEASE
+            value: "479411e7"
+
+  - it: applies the mailer whitelist default and lets environments override it
+    template: templates/deployment-webserver-php-fpm.yaml
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MAILER_FORCE_WHITELIST
+            value: "false"
+
+  - it: overrides envDefaults by app.env
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      app:
+        env:
+          MAILER_FORCE_WHITELIST: "true"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: MAILER_FORCE_WHITELIST
+            value: "true"
+
+  - it: skips empty values
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      app:
+        env:
+          EMPTY_ONE: ""
+    asserts:
+      - notContains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: EMPTY_ONE
+            value: ""
+
+  - it: exposes domain URLs and the internal endpoint to the storefront
+    template: templates/deployment-storefront.yaml
+    set:
+      domains:
+        - hostname: www.example.com
+        - hostname: example.com/en
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: DOMAIN_HOSTNAME_2
+            value: "https://example.com/en/"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: PUBLIC_GRAPHQL_ENDPOINT_HOSTNAME_1
+            value: "https://www.example.com/graphql/"
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: INTERNAL_ENDPOINT
+            value: "http://webserver-php-fpm:8080/"
+
+  - it: exports the app environment for the cron shell
+    template: templates/configmap-cron-env.yaml
+    set:
+      app:
+        env:
+          DATABASE_HOST: "10.0.0.100"
+    asserts:
+      - matchRegex:
+          path: data[".project_env.sh"]
+          pattern: "export DATABASE_HOST='10.0.0.100'"
+      - matchRegex:
+          path: data[".project_env.sh"]
+          pattern: "export MAILER_FORCE_WHITELIST='false'"

@@ -1,0 +1,16 @@
+Shopsys Platform application deployed.
+
+Project:     {{ .Values.project.name }} ({{ .Values.project.environment }})
+Namespace:   {{ .Release.Namespace }}
+Domains:
+{{- range .Values.domains }}
+  - https://{{ .hostname }}
+{{- end }}
+{{- if .Values.deploy.firstDeploy.enabled }}
+
+This was a FIRST DEPLOY{{ if .Values.deploy.firstDeploy.loadDemoData }} with demo data{{ end }}.
+Remember to unset deploy.firstDeploy.enabled for subsequent deploys.
+{{- end }}
+
+Migration job logs:  kubectl logs job/migrate-application -n {{ .Release.Namespace }}
+Post-deploy logs:    kubectl logs job/post-deploy -n {{ .Release.Namespace }}

@@ -1,0 +1,64 @@
+{{- range $i, $d := .Values.domains }}
+{{- $base := include "shopsys.domain.base" $d.hostname }}
+{{- $path := include "shopsys.domain.path" $d.hostname }}
+{{- $redirect := include "shopsys.domain.redirect" $d.hostname }}
+{{- $tlsSecret := include "shopsys.domain.tlsSecretName" $d.hostname }}
+{{- $httpAuth := include "shopsys.domain.httpAuthEnabled" (dict "root" $ "domain" $d) }}
+{{- $cloudflare := include "shopsys.domain.cloudflareEnabled" (dict "root" $ "domain" $d) }}
+{{- $whitelist := include "shopsys.whitelistIps" $ }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eshop-domain-{{ $i }}
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: {{ $.Values.ingress.clusterIssuer }}
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ $.Values.ingress.proxyBodySize }}
+    {{- /* Redirect http to https and redirect between the www and non-www variant of the domain */}}
+    {{- if hasPrefix "www." $base }}
+    nginx.ingress.kubernetes.io/configuration-snippet: {{ `if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^(?!www\.)(?<domain>.+)$) { return 308 https://www.$domain$request_uri; }` | quote }}
+    {{- else }}
+    nginx.ingress.kubernetes.io/configuration-snippet: {{ `if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^www\.(?<domain>.+)$) { return 308 https://$domain$request_uri; }` | quote }}
+    {{- end }}
+    {{- if $httpAuth }}
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: http-auth
+    nginx.ingress.kubernetes.io/auth-realm: Authentication Required - ok
+    {{- if $whitelist }}
+    {{- /* Whitelisted IPs may bypass the HTTP basic auth */}}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ $whitelist | quote }}
+    nginx.ingress.kubernetes.io/satisfy: any
+    {{- end }}
+    {{- end }}
+    {{- if $cloudflare }}
+    nginx.ingress.kubernetes.io/server-snippet: real_ip_header CF-Connecting-IP;
+    {{- end }}
+    {{- with $.Values.ingress.extraAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with $d.extraAnnotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $.Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ $base | quote }}
+        - {{ $redirect | quote }}
+      secretName: {{ $tlsSecret }}
+  rules:
+    - host: {{ $base | quote }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: webserver-php-fpm
+                port:
+                  number: 8080
+            path: {{ if $path }}/{{ $path }}{{ else }}/{{ end }}
+            pathType: Prefix
+    - host: {{ $redirect | quote }}
+{{- end }}

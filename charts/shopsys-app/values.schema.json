@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["project", "domains"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "environment": { "type": "string" }
+      }
+    },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hostname"],
+        "properties": {
+          "id": { "type": "integer" },
+          "hostname": { "type": "string", "minLength": 1 },
+          "forceHttpAuth": { "type": "boolean" },
+          "cloudflareExcluded": { "type": "boolean" },
+          "extraAnnotations": { "type": "object" }
+        }
+      }
+    },
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "className": { "type": "string" },
+        "clusterIssuer": { "type": "string" },
+        "proxyBodySize": { "type": "string" },
+        "extraAnnotations": { "type": "object" }
+      }
+    },
+    "security": {
+      "type": "object",
+      "properties": {
+        "httpAuth": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "htpasswd": { "type": "string" }
+          }
+        },
+        "whitelistIps": { "type": "array", "items": { "type": "string" } },
+        "cloudflare": {
+          "type": "object",
+          "properties": { "enabled": { "type": "boolean" } }
+        },
+        "mcp": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "ipWhitelist": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "app": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "envDefaults": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "adminUrl": { "type": "string" },
+        "s3Endpoint": { "type": "string" },
+        "domainsUrls": {
+          "type": "object",
+          "properties": {
+            "filename": { "type": "string" },
+            "mountPath": { "type": "string" }
+          }
+        }
+      }
+    },
+    "storefront": {
+      "type": "object",
+      "properties": {
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "cron": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "schedule"],
+            "properties": {
+              "name": { "type": "string" },
+              "schedule": { "type": "string" }
+            }
+          }
+        },
+        "terminationGracePeriodSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "consumers": {
+      "type": "object",
+      "properties": {
+        "instances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "transports"],
+            "properties": {
+              "name": { "type": "string" },
+              "transports": { "type": "string" },
+              "replicas": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "string" },
+        "firstDeploy": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "loadDemoData": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "extraManifests": { "type": "array" }
+  }
+}

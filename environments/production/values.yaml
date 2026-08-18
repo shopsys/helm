@@ -1,0 +1,14 @@
+# Production environment.
+# Production behavior is the chart default - override only production-specific settings here.
+
+webserver:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 3
+
+storefront:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 3

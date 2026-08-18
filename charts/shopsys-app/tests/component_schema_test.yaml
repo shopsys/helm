@@ -1,0 +1,82 @@
+suite: standard component keys
+values:
+  - ./values/required.yaml
+templates:
+  - templates/deployment-storefront.yaml
+  - templates/deployment-webserver-php-fpm.yaml
+tests:
+  - it: propagates scheduling and volume keys into the pod spec
+    template: templates/deployment-storefront.yaml
+    set:
+      storefront:
+        nodeSelector:
+          disktype: ssd
+        tolerations:
+          - key: dedicated
+            operator: Equal
+            value: storefront
+            effect: NoSchedule
+        priorityClassName: high-priority
+        extraVolumes:
+          - name: scratch
+            emptyDir: {}
+        extraVolumeMounts:
+          - name: scratch
+            mountPath: /scratch
+        extraEnv:
+          - name: FROM_FIELD
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+    asserts:
+      - equal:
+          path: spec.template.spec.nodeSelector.disktype
+          value: ssd
+      - equal:
+          path: spec.template.spec.tolerations[0].key
+          value: dedicated
+      - equal:
+          path: spec.template.spec.priorityClassName
+          value: high-priority
+      - contains:
+          path: spec.template.spec.volumes
+          content:
+            name: scratch
+            emptyDir: {}
+      - contains:
+          path: spec.template.spec.containers[0].volumeMounts
+          content:
+            name: scratch
+            mountPath: /scratch
+      - equal:
+          path: spec.template.spec.containers[0].env[-1].name
+          value: FROM_FIELD
+
+  - it: allows probe overrides
+    template: templates/deployment-storefront.yaml
+    set:
+      storefront:
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 3000
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe.httpGet.path
+          value: /healthz
+
+  - it: propagates pod annotations and labels
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      webserver:
+        podAnnotations:
+          example.com/scrape: "true"
+        podLabels:
+          team: platform
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["example.com/scrape"]
+          value: "true"
+      - equal:
+          path: spec.template.metadata.labels.team
+          value: platform

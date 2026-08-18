@@ -1,0 +1,11 @@
+{{- if .Values.cron.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cron-env
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+data:
+  .project_env.sh: |+
+    {{- include "shopsys.cronEnv.data" . | nindent 4 }}
+{{- end }}

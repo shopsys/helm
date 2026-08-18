@@ -1,0 +1,73 @@
+{{- /*
+Ingress publishing the MCP server endpoints without HTTP basic auth so external MCP
+clients (e.g. Claude Code) can authenticate with their own Bearer token. Basic auth and
+the MCP Bearer token both use the single Authorization header, so while basic auth is
+enabled on the main ingress the Bearer token would never reach the application.
+
+The MCP server is published only through the first domain, always on root-level paths
+(a path-based first domain does not shift them). The ingress intentionally does not
+repeat any main ingress configuration:
+- the TLS certificate is reused via the shared TLS secret (no cert-manager annotation,
+ so no duplicate Certificate is issued),
+- server-scoped nginx settings of the main ingress (e.g. the Cloudflare real_ip_header
+ server-snippet) apply to the MCP locations automatically, because ingress-nginx merges
+ all ingresses of the same hostname into a single server block.
+The /.well-known/oauth-* paths use pathType ImplementationSpecific, because ingress-nginx
+(>= 1.12) enables strict-validate-path-type by default, which rejects dots in Exact/Prefix
+paths; ImplementationSpecific is matched as a literal prefix.
+*/}}
+{{- if and .Values.security.mcp.enabled (gt (len .Values.domains) 0) }}
+{{- $first := first .Values.domains }}
+{{- $base := include "shopsys.domain.base" $first.hostname }}
+{{- $tlsSecret := include "shopsys.domain.tlsSecretName" $first.hostname }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eshop-mcp
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.proxyBodySize }}
+    {{- with .Values.security.mcp.ipWhitelist }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ join "," . | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ $base | quote }}
+      secretName: {{ $tlsSecret }}
+  rules:
+    - host: {{ $base | quote }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: webserver-php-fpm
+                port:
+                  number: 8080
+            path: '/_mcp'
+            pathType: Prefix
+          - backend:
+              service:
+                name: webserver-php-fpm
+                port:
+                  number: 8080
+            path: '/mcp/oauth'
+            pathType: Prefix
+          - backend:
+              service:
+                name: webserver-php-fpm
+                port:
+                  number: 8080
+            path: '/.well-known/oauth-authorization-server'
+            pathType: ImplementationSpecific
+          - backend:
+              service:
+                name: webserver-php-fpm
+                port:
+                  number: 8080
+            path: '/.well-known/oauth-protected-resource'
+            pathType: ImplementationSpecific
+{{- end }}

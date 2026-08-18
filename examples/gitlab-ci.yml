@@ -1,0 +1,50 @@
+# Example GitLab CI deploy jobs for a project consuming this package.
+# Adjust the image to one containing helm, helmfile, kubectl, yq, curl and openssl.
+
+.deploy: &deploy
+    image:
+        name: shopsys/kubernetes-buildpack:3.0
+    stage: deploy
+    tags:
+        - docker
+    rules:
+        -   if: '$CI_PIPELINE_SOURCE == "schedule"'
+            when: never
+    script:
+        - mkdir -p /root/.kube/ && echo "${KUBE_CONFIG}" > /root/.kube/config
+        - ./deploy/deploy.sh "${DEPLOY_ENVIRONMENT}"
+
+deploy:production:
+    <<: *deploy
+    resource_group: deploy_production
+    variables:
+        KUBE_CONFIG: ${KUBE_CONFIG_PROD}
+        DEPLOY_ENVIRONMENT: production
+    needs:
+        - build
+    rules:
+        -   if: '$CI_PIPELINE_SOURCE == "schedule"'
+            when: never
+        -   if: '$CI_COMMIT_BRANCH == "master" || $CI_COMMIT_BRANCH =~ /^master-.*$/'
+            when: manual
+            allow_failure: false
+    environment:
+        name: production
+
+deploy:devel:
+    <<: *deploy
+    resource_group: deploy_devel
+    variables:
+        KUBE_CONFIG: ${KUBE_CONFIG_DEVEL}
+        DEPLOY_ENVIRONMENT: devel
+    needs:
+        - build
+        - test:standards
+        - test:functional
+        - test:acceptance
+    rules:
+        -   if: '$CI_PIPELINE_SOURCE == "schedule"'
+            when: never
+        -   if: '$CI_COMMIT_BRANCH == "devel" || $CI_COMMIT_BRANCH =~ /^devel-.*$/'
+    environment:
+        name: devel

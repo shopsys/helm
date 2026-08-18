@@ -1,0 +1,68 @@
+suite: self-managing cron
+values:
+  - ./values/required.yaml
+templates:
+  - templates/deployment-cron.yaml
+  - templates/configmap-cron-list.yaml
+tests:
+  - it: drains itself via preStop and uses a bounded grace period
+    template: templates/deployment-cron.yaml
+    set:
+      domains:
+        - hostname: www.example.com
+    asserts:
+      - matchRegex:
+          path: spec.template.spec.containers[0].lifecycle.preStop.exec.command[2]
+          pattern: 'cron-lock.*&.*cron-watch'
+      - equal:
+          path: spec.template.spec.terminationGracePeriodSeconds
+          value: 3600
+
+  - it: stamps the deploy timestamp as the date label
+    template: templates/deployment-cron.yaml
+    set:
+      domains:
+        - hostname: www.example.com
+      deploy:
+        timestamp: "1234567890"
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.date
+          value: "1234567890"
+
+  - it: falls back to the release revision when no timestamp is given
+    template: templates/deployment-cron.yaml
+    release:
+      revision: 7
+    set:
+      domains:
+        - hostname: www.example.com
+    asserts:
+      - equal:
+          path: spec.template.metadata.labels.date
+          value: "7"
+
+  - it: renders crontab lines for every instance
+    template: templates/configmap-cron-list.yaml
+    set:
+      cron:
+        instances:
+          - name: cron
+            schedule: '*/5 * * * *'
+          - name: cron-customers
+            schedule: '*/10 * * * *'
+    asserts:
+      - matchRegex:
+          path: data.cron
+          pattern: '\*/5 \* \* \* \* \. /root/\.project_env\.sh && cd /var/www/html/ && \./phing cron > /dev/null 2>&1'
+      - matchRegex:
+          path: data.cron
+          pattern: '\*/10 \* \* \* \* .* \./phing cron-customers '
+
+  - it: renders nothing when cron is disabled
+    set:
+      cron:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

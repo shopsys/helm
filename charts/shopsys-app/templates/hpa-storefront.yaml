@@ -1,0 +1,22 @@
+{{- if .Values.storefront.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: storefront
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: storefront
+  minReplicas: {{ .Values.storefront.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.storefront.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.storefront.autoscaling.targetCPUUtilization }}
+{{- end }}

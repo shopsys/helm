@@ -1,0 +1,46 @@
+project:
+  name: myproject
+domains:
+  - hostname: www.example.com
+  - hostname: www.example.sk
+app:
+  env:
+    APP_SECRET: "test-app-secret-key"
+    DATABASE_HOST: "10.0.0.100"
+    DATABASE_NAME: "myproject-production"
+    DATABASE_PORT: "5432"
+    DATABASE_USER: "myproject-production"
+    DATABASE_PASSWORD: "test-db-password"
+    S3_ENDPOINT: "https://s3.example.com"
+    S3_ACCESS_KEY: "myproject-production"
+    S3_SECRET: "test-s3-secret"
+    S3_BUCKET_NAME: "myproject-production"
+    ELASTICSEARCH_HOST: "http://elasticsearch:9200"
+    ELASTIC_SEARCH_INDEX_PREFIX: "myproject-production"
+    REDIS_PREFIX: "myproject-production"
+    MAILER_DSN: "smtp://mailhog:1025"
+    TRUSTED_PROXY: "10.0.0.0/8"
+    MESSENGER_TRANSPORT_DSN: "amqp://guest:guest@rabbitmq:5672/%2f/messages"
+    SENTRY_RELEASE: "479411e7"
+  s3Endpoint: "https://s3.example.com"
+storefront:
+  env:
+    SENTRY_RELEASE: "479411e7"
+  autoscaling:
+    enabled: true
+cron:
+  instances:
+    - name: cron
+      schedule: '*/5 * * * *'
+consumers:
+  instances:
+    - name: email
+      transports: email_transport
+      replicas: 1
+webserver:
+  autoscaling:
+    enabled: true
+rabbitmq:
+  management:
+    ipWhitelist:
+      - 10.0.0.0/8

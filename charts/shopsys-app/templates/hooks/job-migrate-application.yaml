@@ -1,0 +1,65 @@
+{{- /*
+Migrates the application (database migrations, elasticsearch migrations, ...) before the
+new application version is rolled out. Runs as a pre-install/pre-upgrade hook, so a failed
+migration aborts the whole deploy and the previous release stays untouched.
+
+hook-delete-policy is intentionally only before-hook-creation: the finished (or failed) Job
+survives after the deploy so `kubectl logs job/migrate-application` works, and helm deletes
+it at the start of the next deploy (legacy "Delete previous migration pod" step).
+
+The command variant is selected by deploy.firstDeploy.*:
+- continuous deploy: check migrations + enable maintenance + run db-dependent build phase
+- first deploy: full first deploy of the cluster (the sleep 30 is kept from the legacy
+ package to let infrastructure services settle)
+- first deploy with demo data: first deploy + demo data import
+*/}}
+{{- if .Values.deploy.migration.enabled }}
+{{- $targets := .Values.deploy.migration.targets }}
+{{- $command := printf "cd /var/www/html && ./phing %s" $targets.continuous }}
+{{- if .Values.deploy.firstDeploy.enabled }}
+{{- if .Values.deploy.firstDeploy.loadDemoData }}
+{{- $command = printf "cd /var/www/html && sleep 30 && ./phing %s" $targets.firstDeployWithDemoData }}
+{{- else }}
+{{- $command = printf "cd /var/www/html && sleep 30 && ./phing %s" $targets.firstDeploy }}
+{{- end }}
+{{- end }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-application
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      volumes:
+        - name: domains-urls
+          configMap:
+            name: domains-urls-hook
+      containers:
+        - name: migrate-application
+          image: {{ include "shopsys.image" .Values.webserver.image | quote }}
+          command: ["sh", "-c", {{ $command | quote }}]
+          env:
+            {{- include "shopsys.appEnv" (dict "root" $) | nindent 12 }}
+          {{- with .Values.deploy.migration.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: domains-urls
+              mountPath: /var/www/html/{{ .Values.app.domainsUrls.mountPath }}
+              subPath: {{ .Values.app.domainsUrls.filename | quote }}
+      restartPolicy: Never
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+{{- end }}

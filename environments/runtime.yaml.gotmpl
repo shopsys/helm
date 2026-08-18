@@ -1,0 +1,51 @@
+{{/*
+Runtime values sourced from environment variables (CI-dynamic and sensitive data).
+Everything else belongs to the committed values files. Every block is conditional,
+so unset variables never override committed values.
+*/}}
+
+{{- if env "TAG" }}
+webserver:
+  image:
+    repository: {{ env "TAG" | quote }}
+{{- end }}
+
+{{- if env "STOREFRONT_TAG" }}
+storefront:
+  image:
+    repository: {{ env "STOREFRONT_TAG" | quote }}
+{{- end }}
+
+{{- if eq (env "GCLOUD_DEPLOY") "true" }}
+registry:
+  server: eu.gcr.io
+  username: _json_key
+  password: {{ env "GCLOUD_CONTAINER_REGISTRY_ACCOUNT" | quote }}
+  email: {{ env "GCLOUD_CONTAINER_REGISTRY_EMAIL" | quote }}
+{{- else if env "CI_REGISTRY" }}
+registry:
+  server: {{ env "CI_REGISTRY" | quote }}
+  username: {{ env "DEPLOY_REGISTER_USER" | quote }}
+  password: {{ env "DEPLOY_REGISTER_PASSWORD" | quote }}
+{{- end }}
+
+{{- if env "RABBITMQ_DEFAULT_USER" }}
+rabbitmq:
+  auth:
+    user: {{ env "RABBITMQ_DEFAULT_USER" | quote }}
+    password: {{ env "RABBITMQ_DEFAULT_PASS" | quote }}
+{{- end }}
+
+{{- if env "BASIC_AUTH_PATH" }}
+security:
+  httpAuth:
+    htpasswd: {{ readFile (env "BASIC_AUTH_PATH") | quote }}
+{{- end }}
+
+deploy:
+{{- if env "DEPLOY_TIMESTAMP" }}
+  timestamp: {{ env "DEPLOY_TIMESTAMP" | quote }}
+{{- end }}
+  firstDeploy:
+    enabled: {{ eq (env "FIRST_DEPLOY") "1" }}
+    loadDemoData: {{ eq (env "FIRST_DEPLOY_LOAD_DEMO_DATA") "1" }}

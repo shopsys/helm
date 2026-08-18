@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webserver-php-fpm
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+    app: webserver-php-fpm
+spec:
+  progressDeadlineSeconds: {{ .Values.webserver.progressDeadlineSeconds }}
+  {{- if not .Values.webserver.autoscaling.enabled }}
+  replicas: {{ .Values.webserver.replicas }}
+  {{- end }}
+  strategy:
+    {{- toYaml .Values.webserver.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      app: webserver-php-fpm
+  template:
+    metadata:
+      annotations:
+        {{- include "shopsys.podAnnotations" (dict "root" $ "app" "app" "logging" "true" "component" .Values.webserver) | nindent 8 }}
+        {{- include "shopsys.checksums" (dict "root" $ "include" (list "domainsUrls" "appEnv" "nginx" "phpFpm")) | nindent 8 }}
+      labels:
+        app: webserver-php-fpm
+        {{- with .Values.webserver.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "shopsys.podSettings" (dict "root" $ "component" .Values.webserver) | nindent 6 }}
+      hostAliases:
+        - ip: "127.0.0.1"
+          hostnames:
+            - "webserver-php-fpm"
+            - "php-fpm"
+            - "webserver"
+      volumes:
+        - name: source-codes
+          emptyDir: {}
+        - name: domains-urls
+          configMap:
+            name: domains-urls
+        - name: nginx-default-config
+          configMap:
+            name: nginx-default-config
+        - name: production-php-fpm
+          configMap:
+            name: production-php-fpm
+        - name: production-php-opcache
+          configMap:
+            name: production-php-opcache
+        - name: fe-api-keys-volume
+          secret:
+            secretName: fe-api-keys
+            defaultMode: 0644
+        {{- with .Values.webserver.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      initContainers:
+        - name: copy-source-codes-to-volume
+          image: {{ include "shopsys.image" .Values.webserver.image | quote }}
+          command: ["sh", "-c", "cp -r -n /var/www/html/. /tmp/source-codes"]
+          volumeMounts:
+            - name: source-codes
+              mountPath: /tmp/source-codes
+            - name: domains-urls
+              mountPath: /var/www/html/{{ .Values.app.domainsUrls.mountPath }}
+              subPath: {{ .Values.app.domainsUrls.filename | quote }}
+      containers:
+        - image: {{ include "shopsys.image" .Values.webserver.image | quote }}
+          name: php-fpm
+          imagePullPolicy: {{ .Values.webserver.image.pullPolicy | default "IfNotPresent" }}
+          workingDir: /var/www/html
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/var/www/html/phing", "-S", "warmup"]
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - '-c'
+                  - sleep 10 && kill -SIGQUIT 1
+          env:
+            {{- include "shopsys.appEnv" (dict "root" $ "component" .Values.webserver) | nindent 12 }}
+          volumeMounts:
+            - name: source-codes
+              mountPath: /var/www/html
+            - name: domains-urls
+              mountPath: /var/www/html/{{ .Values.app.domainsUrls.mountPath }}
+              subPath: {{ .Values.app.domainsUrls.filename | quote }}
+            - name: production-php-fpm
+              mountPath: /usr/local/etc/php-fpm.d/www.conf
+              subPath: www.conf
+            - name: production-php-opcache
+              mountPath: /usr/local/etc/php/conf.d/php-opcache.ini
+              subPath: php-opcache.ini
+            - name: fe-api-keys-volume
+              readOnly: true
+              mountPath: /var/www/html/config/frontend-api
+            {{- with .Values.webserver.phpFpm.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.webserver.phpFpm.resources | nindent 12 }}
+
+        - image: {{ include "shopsys.image" .Values.webserver.nginx.image | quote }}
+          name: webserver
+          {{- with .Values.webserver.nginx.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          ports:
+            - containerPort: 8080
+              name: http
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 5
+            httpGet:
+              path: /health
+              port: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+          volumeMounts:
+            - name: nginx-default-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: nginx-default-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: project-nginx.conf
+            - name: source-codes
+              mountPath: /var/www/html
+            {{- with .Values.webserver.nginx.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          lifecycle:
+            preStop:
+              exec:
+                command: [
+                  'sh', '-c',
+                  'sleep 5 && /usr/sbin/nginx -s quit'
+                ]
+          resources:
+            {{- toYaml .Values.webserver.nginx.resources | nindent 12 }}
+      terminationGracePeriodSeconds: {{ .Values.webserver.terminationGracePeriodSeconds }}

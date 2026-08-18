@@ -1,0 +1,20 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+    app: redis
+    prometheus-exporter: 'true'
+spec:
+  selector:
+    app: redis
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+    - name: prometheus-exporter
+      port: 9121
+      targetPort: 9121
+{{- end }}

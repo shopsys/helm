@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: storefront
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  {{- if not .Values.storefront.autoscaling.enabled }}
+  replicas: {{ .Values.storefront.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: storefront
+  template:
+    metadata:
+      annotations:
+        {{- include "shopsys.podAnnotations" (dict "root" $ "app" "storefront" "logging" "false" "component" .Values.storefront) | nindent 8 }}
+      labels:
+        app: storefront
+        {{- with .Values.storefront.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "shopsys.podSettings" (dict "root" $ "component" .Values.storefront) | nindent 6 }}
+      containers:
+        - name: storefront
+          image: {{ include "shopsys.image" .Values.storefront.image | quote }}
+          {{- with .Values.storefront.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          ports:
+            - name: storefront
+              containerPort: 3000
+              protocol: TCP
+          env:
+            {{- include "shopsys.envBlock" .Values.storefront.env | nindent 12 }}
+            {{- range $i, $d := .Values.domains }}
+            - name: DOMAIN_HOSTNAME_{{ add $i 1 }}
+              value: {{ printf "https://%s/" $d.hostname | quote }}
+            - name: PUBLIC_GRAPHQL_ENDPOINT_HOSTNAME_{{ add $i 1 }}
+              value: {{ printf "https://%s/graphql/" $d.hostname | quote }}
+            {{- end }}
+            - name: INTERNAL_ENDPOINT
+              value: "http://webserver-php-fpm:8080/"
+            {{- with .Values.storefront.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          lifecycle:
+            {{- toYaml .Values.storefront.lifecycle | nindent 12 }}
+          resources:
+            {{- toYaml .Values.storefront.resources | nindent 12 }}
+          {{- include "shopsys.containerSettings" .Values.storefront | nindent 10 }}
+          {{- with .Values.storefront.extraVolumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.storefront.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: {{ .Values.storefront.terminationGracePeriodSeconds }}

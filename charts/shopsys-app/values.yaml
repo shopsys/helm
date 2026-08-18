@@ -1,0 +1,346 @@
+# Default values for shopsys-app.
+#
+# Every workload component (webserver, storefront, cron, consumers) exposes the same
+# standard keys: image {repository, tag, pullPolicy}, replicas, resources, podAnnotations,
+# podLabels, nodeSelector, tolerations, affinity, extraEnv, extraVolumes, extraVolumeMounts,
+# livenessProbe/readinessProbe, securityContext/podSecurityContext, lifecycle,
+# terminationGracePeriodSeconds, priorityClassName. Webserver and storefront additionally
+# expose independent `autoscaling` sections.
+
+project:
+  name: ""          # REQUIRED - project name; namespace is <name>-<environment>
+  environment: ""   # injected by helmfile from the selected environment
+
+# Ordered list of e-shop domains (index 0 = legacy DOMAIN_HOSTNAME_1).
+# hostname may contain a path for path-based domains, e.g. "example.com/en".
+domains: []
+#  - hostname: www.example.com
+#    forceHttpAuth: false        # protect this domain by HTTP basic auth even when
+#                                # security.httpAuth.enabled is false (legacy FORCE_HTTP_AUTH_IN_PRODUCTION)
+#    cloudflareExcluded: false   # exclude from Cloudflare handling (legacy CLOUDFLARE_EXCLUDED_DOMAINS)
+#    extraAnnotations: {}        # extra annotations for this domain's ingress
+
+ingress:
+  className: nginx
+  clusterIssuer: letsencrypt-prod
+  proxyBodySize: 32m
+  extraAnnotations: {}   # applied to every e-shop domain ingress
+
+security:
+  httpAuth:
+    enabled: false       # enable HTTP basic auth on all domains (legacy RUNNING_PRODUCTION=0 behavior)
+    htpasswd: ""         # htpasswd file content - sensitive, provide via environment interpolation
+  # IPs allowed to bypass HTTP basic auth (legacy DEFAULT_WHITELIST_IPS + WHITELIST_IPS)
+  whitelistIps: []
+  cloudflare:
+    enabled: false       # legacy USING_CLOUDFLARE - sets real_ip_header CF-Connecting-IP
+  mcp:
+    enabled: true        # publish MCP endpoints through a separate ingress without basic auth
+    ipWhitelist: []      # source ranges allowed to reach MCP; empty = unrestricted
+  feApiKeys:
+    # Optional declarative FE API keypair. When both are set the chart renders the
+    # fe-api-keys secret; otherwise the deploy wrapper generates it once via openssl.
+    privateKey: ""
+    publicKey: ""
+
+registry:
+  create: true           # create the dockerregistry image pull secret
+  server: ""             # sensitive/CI - provide via environment interpolation
+  username: ""
+  password: ""
+  email: ""
+
+imagePullSecrets:
+  - dockerregistry
+
+app:
+  # Backend environment variables (webserver, cron, consumers, migration job, cron shell).
+  # Values MUST be strings - quote values like "479411e7" in YAML.
+  env: {}
+  # Chart-provided defaults; environment overlays override them (dev sets "true").
+  envDefaults:
+    MAILER_FORCE_WHITELIST: "false"
+  domainsUrls:
+    filename: domains_urls.yaml
+    mountPath: config/domains_urls.yaml
+  adminUrl: admin
+  s3Endpoint: ""
+
+webserver:
+  image:
+    repository: ""       # application image (shared by cron, consumers and migration job);
+    tag: ""              # CI provides one full reference in repository, tag stays empty
+    pullPolicy: IfNotPresent
+  replicas: 1            # omitted from the manifest when autoscaling.enabled
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 3
+    targetCPUUtilization: 120
+  progressDeadlineSeconds: 1500
+  terminationGracePeriodSeconds: 120
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  phpFpm:
+    resources:
+      limits:
+        memory: 2Gi
+      requests:
+        cpu: "500m"
+        memory: 500Mi
+    extraVolumeMounts: []
+    # php-fpm pool configuration (www.conf)
+    config: |
+      ; The below default configuration is based on a server without much resources.
+      ; Don't forget to tweak it to fit expected workload and hardware.
+      ;
+      ; https://www.php.net/manual/en/install.fpm.configuration.php
+      [global]
+
+      log_level = warning
+
+      [www]
+
+      listen = 127.0.0.1:9000
+
+      pm = dynamic
+      pm.max_children = 20
+      pm.start_servers = 5
+      pm.min_spare_servers = 5
+      pm.max_spare_servers = 10
+      pm.max_requests = 400
+
+      request_terminate_timeout = 60s
+
+      access.log = /dev/null
+    # opcache configuration (php-opcache.ini)
+    opcacheConfig: |
+      opcache.enable = 1
+      opcache.fast_shutdown = true
+      opcache.interned_strings_buffer = 24
+      opcache.max_accelerated_files = 60000
+      opcache.memory_consumption = 256
+      opcache.revalidate_path = 0
+      opcache.revalidate_freq = 0
+      opcache.validate_timestamps = 0
+      opcache.use_cwd = 0
+      opcache.preload = "/var/www/html/app/preload.php"
+  nginx:
+    image:
+      repository: nginx
+      tag: 1.29-alpine
+      pullPolicy: ""
+    resources:
+      limits:
+        memory: 300Mi
+      requests:
+        cpu: "50m"
+        memory: 100Mi
+    # nginx.conf / vhost content; empty = chart defaults from files/nginx/ (templated with tpl)
+    config: ""
+    projectConfig: ""
+    extraVolumeMounts: []
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: "kubernetes.io/hostname"
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - webserver-php-fpm
+    podAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: "kubernetes.io/hostname"
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - redis
+  podSecurityContext: {}
+  extraEnv: []
+  extraVolumes: []
+  priorityClassName: ""
+
+storefront:
+  image:
+    repository: ""       # storefront image; CI provides one full reference, tag stays empty
+    tag: ""
+    pullPolicy: ""
+  env: {}                # storefront environment variables (values must be strings)
+  replicas: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 3
+    targetCPUUtilization: 120
+  terminationGracePeriodSeconds: 60
+  resources:
+    limits:
+      memory: "1.5Gi"
+    requests:
+      cpu: "500m"
+      memory: "800Mi"
+  livenessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 30
+    periodSeconds: 5
+    timeoutSeconds: 5
+  readinessProbe:
+    httpGet:
+      path: /api/health
+      port: 3000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+  lifecycle:
+    preStop:
+      exec:
+        command:
+          - sleep
+          - '10'
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: "kubernetes.io/hostname"
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - storefront
+  podSecurityContext: {}
+  securityContext: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  priorityClassName: ""
+
+cron:
+  enabled: true
+  # Cron instances: name is the phing target, schedule is a crontab expression.
+  instances: []
+  #  - name: cron
+  #    schedule: '*/5 * * * *'
+  # The cron pod drains itself on termination (preStop: cron-lock + cron-watch);
+  # must exceed the runtime of the longest cron instance.
+  terminationGracePeriodSeconds: 3600
+  progressDeadlineSeconds: 1500
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  resources: {}
+  securityContext:
+    runAsUser: 0
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations:
+    - key: "workload"
+      operator: "Equal"
+      value: "background"
+      effect: "NoSchedule"
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: workload
+                operator: In
+                values:
+                  - background
+  podSecurityContext: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  priorityClassName: ""
+
+consumers:
+  # Defaults shared by all consumer instances; every key can be overridden per instance.
+  defaults:
+    replicas: 1
+    timeLimit: 300
+    terminationGracePeriodSeconds: 300
+    progressDeadlineSeconds: 600
+    resources: {}
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations:
+      - key: "workload"
+        operator: "Equal"
+        value: "background"
+        effect: "NoSchedule"
+    affinity:
+      nodeAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+                - key: workload
+                  operator: In
+                  values:
+                    - background
+    podSecurityContext: {}
+    securityContext: {}
+    extraEnv: []
+    extraVolumes: []
+    extraVolumeMounts: []
+    priorityClassName: ""
+  # Consumer instances: name, transports (space-separated messenger transports), replicas.
+  instances: []
+  #  - name: email
+  #    transports: email_transport
+  #    replicas: 1
+
+deploy:
+  # Forces the cron pod to restart on every deploy; the wrapper passes the current
+  # timestamp, golden tests pin "1234567890". Falls back to the release revision.
+  timestamp: ""
+  firstDeploy:
+    enabled: false       # first deploy of the project instance (legacy FIRST_DEPLOY=1)
+    loadDemoData: false  # load demo data during the first deploy
+  migration:
+    enabled: true
+    # Phing targets executed by the migrate-application hook Job
+    targets:
+      continuous: "-verbose db-migrations-count-with-maintenance build-deploy-part-2-db-dependent"
+      firstDeploy: "cluster-first-deploy"
+      firstDeployWithDemoData: "cluster-first-deploy db-fixtures-demo plugin-demo-data-load friendly-urls-generate domains-urls-replace elasticsearch-export"
+    resources: {}
+  postDeploy:
+    enabled: true
+    resources: {}
+  hooks:
+    # kubectlImage is the image used by the cron-suspend hook Job; pinned tag on purpose
+    # (bitnami/kubectl moved to the unmaintained bitnamilegacy distribution in 2025)
+    kubectlImage: rancher/kubectl:v1.33.13
+    serviceAccountName: deploy-hooks
+
+# Additional raw manifests rendered through tpl (escape hatch for project additions).
+extraManifests: []

@@ -1,0 +1,72 @@
+suite: infrastructure services
+values:
+  - ./values/required.yaml
+templates:
+  - templates/deployment-redis.yaml
+  - templates/statefulset-rabbitmq.yaml
+  - templates/ingress-rabbitmq.yaml
+  - templates/rbac-deploy-hooks.yaml
+tests:
+  - it: runs redis with the exporter sidecar and health probes
+    template: templates/deployment-redis.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].name
+          value: redis-exporter
+      - equal:
+          path: spec.template.spec.containers[1].image
+          value: "redis:7.4-alpine"
+      - matchRegex:
+          path: spec.template.spec.containers[1].livenessProbe.exec.command[2]
+          pattern: liveness.sh
+
+  - it: provisions rabbitmq with persistent storage and credentials
+    template: templates/statefulset-rabbitmq.yaml
+    set:
+      rabbitmq:
+        auth:
+          user: admin
+          password: secret
+    asserts:
+      - equal:
+          path: spec.volumeClaimTemplates[0].spec.storageClassName
+          value: nfs-client
+      - contains:
+          path: spec.template.spec.containers[0].env
+          content:
+            name: RABBITMQ_DEFAULT_USER
+            value: "admin"
+
+  - it: derives the management hostname from the first domain
+    template: templates/ingress-rabbitmq.yaml
+    set:
+      domains:
+        - hostname: www.example.com
+      rabbitmq:
+        management:
+          ipWhitelist:
+            - 10.0.0.0/8
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: rabbitmq.www.example.com
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/whitelist-source-range"]
+          value: 10.0.0.0/8
+
+  - it: prefers an explicit management hostname
+    template: templates/ingress-rabbitmq.yaml
+    set:
+      rabbitmq:
+        management:
+          hostname: mq.example.com
+    asserts:
+      - equal:
+          path: spec.rules[0].host
+          value: mq.example.com
+
+  - it: ships RBAC for the deploy hook jobs
+    template: templates/rbac-deploy-hooks.yaml
+    asserts:
+      - hasDocuments:
+          count: 3

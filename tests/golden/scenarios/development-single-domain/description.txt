@@ -1,0 +1,1 @@
+Development environment with single domain and HTTP authentication

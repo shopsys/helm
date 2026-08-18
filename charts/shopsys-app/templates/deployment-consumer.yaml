@@ -1,0 +1,87 @@
+{{- range .Values.consumers.instances }}
+{{- $consumer := mergeOverwrite (deepCopy $.Values.consumers.defaults) . }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-{{ $consumer.name }}
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+    app: consumer-{{ $consumer.name }}
+spec:
+  progressDeadlineSeconds: {{ $consumer.progressDeadlineSeconds }}
+  replicas: {{ $consumer.replicas }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: consumer-{{ $consumer.name }}
+  template:
+    metadata:
+      annotations:
+        {{- include "shopsys.podAnnotations" (dict "root" $ "app" $consumer.name "logging" "true" "component" $consumer) | nindent 8 }}
+        {{- include "shopsys.checksums" (dict "root" $ "include" (list "domainsUrls" "appEnv")) | nindent 8 }}
+      labels:
+        app: consumer-{{ $consumer.name }}
+        {{- with $consumer.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "shopsys.podSettings" (dict "root" $ "component" $consumer) | nindent 6 }}
+      volumes:
+        - name: domains-urls
+          configMap:
+            name: domains-urls
+        - name: fe-api-keys-volume
+          secret:
+            secretName: fe-api-keys
+            defaultMode: 0644
+        {{- with $consumer.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      terminationGracePeriodSeconds: {{ $consumer.terminationGracePeriodSeconds }}
+      containers:
+        - image: {{ include "shopsys.image" $.Values.webserver.image | quote }}
+          name: consumer-{{ $consumer.name }}
+          imagePullPolicy: {{ $.Values.webserver.image.pullPolicy | default "IfNotPresent" }}
+          workingDir: /var/www/html
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              PIPE=/tmp/log-pipe
+              rm -rf $PIPE
+              mkfifo $PIPE
+              chmod 666 $PIPE
+              stdbuf -o0 tail -n +1 -f $PIPE &
+
+              sleep 5
+
+              while [ ! -f /tmp/stop_consumer ]; do
+                php /var/www/html/bin/console messenger:consume {{ $consumer.transports }} --time-limit={{ $consumer.timeLimit }} --quiet
+                sleep 2
+              done
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "touch /tmp/stop_consumer && php bin/console messenger:stop-workers"]
+          env:
+            {{- include "shopsys.appEnv" (dict "root" $ "component" $consumer) | nindent 12 }}
+          {{- with $consumer.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- include "shopsys.containerSettings" $consumer | nindent 10 }}
+          volumeMounts:
+            - name: domains-urls
+              mountPath: /var/www/html/{{ $.Values.app.domainsUrls.mountPath }}
+              subPath: {{ $.Values.app.domainsUrls.filename | quote }}
+            - name: fe-api-keys-volume
+              readOnly: true
+              mountPath: /var/www/html/config/frontend-api
+            {{- with $consumer.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+{{- end }}

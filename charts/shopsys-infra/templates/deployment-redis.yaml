@@ -1,0 +1,103 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ .Values.redis.replicas }}
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      annotations:
+        {{- include "shopsys.podAnnotations" (dict "root" $ "app" "redis" "logging" "false" "component" .Values.redis) | nindent 8 }}
+        checksum/redis-config: {{ .Values.redis.config | sha256sum }}
+      labels:
+        app: redis
+        {{- with .Values.redis.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "shopsys.podSettings" (dict "root" $ "component" .Values.redis "pullSecrets" false) | nindent 6 }}
+      volumes:
+        - name: health
+          configMap:
+            name: redis-health-configmap
+            defaultMode: 0755
+        - name: config
+          configMap:
+            name: redis
+            defaultMode: 0755
+        {{- with .Values.redis.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      containers:
+        - name: redis-exporter
+          image: {{ include "shopsys.image" .Values.redis.exporter.image | quote }}
+          imagePullPolicy: {{ .Values.redis.exporter.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: exporter
+              containerPort: 9121
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.redis.exporter.resources | nindent 12 }}
+        - name: redis
+          image: {{ include "shopsys.image" .Values.redis.image | quote }}
+          {{- with .Values.redis.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          ports:
+            - name: redis
+              containerPort: 6379
+              protocol: TCP
+          {{- with .Values.redis.extraEnv }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: health
+              mountPath: /health
+            - name: config
+              mountPath: /usr/local/etc/redis/redis.conf
+              subPath: redis.conf
+            {{- with .Values.redis.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          args:
+            - /usr/local/etc/redis/redis.conf
+          {{- with .Values.redis.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.redis.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.redis.livenessProbe | nindent 12 }}
+          {{- else }}
+          livenessProbe:
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+            exec:
+              command:
+                - sh
+                - -c
+                - /health/liveness.sh 5
+          {{- end }}
+          {{- if .Values.redis.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.redis.readinessProbe | nindent 12 }}
+          {{- else }}
+          readinessProbe:
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
+            exec:
+              command:
+                - sh
+                - -c
+                - /health/readiness.sh 5
+          {{- end }}
+          resources:
+            {{- toYaml .Values.redis.resources | nindent 12 }}
+{{- end }}

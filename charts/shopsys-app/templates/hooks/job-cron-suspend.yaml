@@ -1,0 +1,33 @@
+{{- /*
+Suspends crons before the migration runs (legacy: kubectl exec phing cron-lock + cron-watch).
+Scaling the cron deployment to 0 triggers its preStop drain (cron-lock + wait for running
+instances inside the pod), then this Job waits for the pod to disappear. Tolerates the very
+first deploy when no cron deployment exists yet.
+*/}}
+{{- if .Values.cron.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cron-suspend
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      serviceAccountName: {{ .Values.deploy.hooks.serviceAccountName }}
+      restartPolicy: Never
+      containers:
+        - name: cron-suspend
+          image: {{ .Values.deploy.hooks.kubectlImage | quote }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              kubectl scale deployment/cron --replicas=0 --namespace={{ .Release.Namespace }} 2>/dev/null || true
+              kubectl wait --for=delete pod -l app=cron --namespace={{ .Release.Namespace }} --timeout={{ add .Values.cron.terminationGracePeriodSeconds 60 }}s || true
+{{- end }}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["project"],
+  "properties": {
+    "project": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "environment": { "type": "string" }
+      }
+    },
+    "redis": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "config": { "type": "string" },
+        "replicas": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "rabbitmq": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "replicas": { "type": "integer", "minimum": 0 },
+        "auth": {
+          "type": "object",
+          "properties": {
+            "user": { "type": "string" },
+            "password": { "type": "string" }
+          }
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "storageClass": { "type": "string" },
+            "size": { "type": "string" }
+          }
+        },
+        "management": {
+          "type": "object",
+          "properties": {
+            "hostname": { "type": "string" },
+            "ipWhitelist": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    },
+    "deployHooks": {
+      "type": "object",
+      "properties": {
+        "rbac": {
+          "type": "object",
+          "properties": {
+            "create": { "type": "boolean" },
+            "serviceAccountName": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

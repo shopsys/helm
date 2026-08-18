@@ -1,0 +1,22 @@
+# Shared configuration inherited by every environment.
+# Environment files (environments/<name>/values.yaml) override only the differences.
+# This file is an EXAMPLE - projects adjust it to their needs.
+
+project:
+  name: myproject
+
+domains:
+  - hostname: www.example.com
+
+# Backend application environment variables shared by all environments.
+# Values must be strings - quote numbers and booleans.
+app:
+  env: {}
+
+cron:
+  instances:
+    - name: cron
+      schedule: '*/5 * * * *'
+
+consumers:
+  instances: []

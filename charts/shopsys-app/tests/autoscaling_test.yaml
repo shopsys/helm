@@ -1,0 +1,54 @@
+suite: per-component autoscaling
+values:
+  - ./values/required.yaml
+templates:
+  - templates/hpa-webserver.yaml
+  - templates/hpa-storefront.yaml
+  - templates/deployment-webserver-php-fpm.yaml
+  - templates/deployment-storefront.yaml
+tests:
+  - it: renders no HPA by default
+    template: templates/hpa-webserver.yaml
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: scales components independently
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+          minReplicas: 2
+          maxReplicas: 5
+    asserts:
+      - template: templates/hpa-webserver.yaml
+        hasDocuments:
+          count: 1
+      - template: templates/hpa-storefront.yaml
+        hasDocuments:
+          count: 0
+      - template: templates/hpa-webserver.yaml
+        equal:
+          path: spec.maxReplicas
+          value: 5
+      - template: templates/hpa-webserver.yaml
+        equal:
+          path: spec.metrics[0].containerResource.container
+          value: php-fpm
+
+  - it: omits replicas from the deployment when autoscaling is enabled
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+    asserts:
+      - notExists:
+          path: spec.replicas
+
+  - it: keeps replicas when autoscaling is disabled
+    template: templates/deployment-storefront.yaml
+    asserts:
+      - equal:
+          path: spec.replicas
+          value: 1

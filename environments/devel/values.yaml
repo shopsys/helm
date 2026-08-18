@@ -1,0 +1,45 @@
+# Development environment (legacy RUNNING_PRODUCTION=0 behavior expressed purely as values).
+
+security:
+  httpAuth:
+    enabled: true
+
+app:
+  envDefaults:
+    MAILER_FORCE_WHITELIST: "true"
+
+# Minimal CPU requests on the development cluster (legacy "downscale" step)
+webserver:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 2
+  phpFpm:
+    resources:
+      requests:
+        cpu: "0.01"
+        memory: 100Mi
+  nginx:
+    resources:
+      requests:
+        cpu: "0.01"
+
+storefront:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 2
+  resources:
+    requests:
+      cpu: "0.01"
+
+redis:
+  resources:
+    requests:
+      cpu: "0.01"
+      memory: 100Mi
+
+rabbitmq:
+  resources:
+    requests:
+      cpu: "0.01"

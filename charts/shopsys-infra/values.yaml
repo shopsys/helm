@@ -1,0 +1,135 @@
+# Default values for shopsys-infra.
+# The helmfile passes the full environment state values to this chart, so shared
+# sections (project, domains, ingress, security) are documented here with defaults.
+
+project:
+  name: ""          # REQUIRED - project name; namespace is <name>-<environment>
+  environment: ""   # injected by helmfile from the selected environment
+
+# Ordered list of e-shop domains; index 0 is the first domain (legacy DOMAIN_HOSTNAME_1).
+# Used here only for the default RabbitMQ management hostname.
+domains: []
+
+ingress:
+  className: nginx
+  clusterIssuer: letsencrypt-prod
+  proxyBodySize: 32m
+
+security:
+  httpAuth:
+    enabled: false
+  whitelistIps: []
+  cloudflare:
+    enabled: false
+
+# Secrets referenced by pods are created by the shopsys-app release.
+imagePullSecrets:
+  - dockerregistry
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7.4-alpine
+    pullPolicy: ""
+  # redis.conf content
+  config: |
+    tcp-keepalive 30
+    timeout 60
+    loglevel notice
+    maxmemory 2200mb
+    maxmemory-policy volatile-lru
+
+    # Disable AOF and RDB persistence as we keep everything in memory only, see https://redis.io/topics/persistence
+    appendonly no
+    # Disable RDB persistence, AOF persistence already disabled above.
+    save ""
+
+    # Enabling active memory defragmentation
+    activedefrag yes
+  replicas: 1
+  resources:
+    limits:
+      memory: "2500Mi"
+    requests:
+      memory: "2500Mi"
+      cpu: "100m"
+  exporter:
+    image:
+      repository: oliver006/redis_exporter
+      # Pinned tag (best practice - never use floating tags); the legacy package used an
+      # untagged image with pullPolicy Always
+      tag: v1.89.0
+      pullPolicy: IfNotPresent
+    resources:
+      limits:
+        memory: 128Mi
+      requests:
+        cpu: 10m
+        memory: 128Mi
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podSecurityContext: {}
+  securityContext: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  livenessProbe: {}
+  readinessProbe: {}
+  priorityClassName: ""
+
+rabbitmq:
+  enabled: true
+  image:
+    repository: rabbitmq
+    tag: 4.1-management-alpine
+    pullPolicy: ""
+  auth:
+    user: ""       # sensitive - provide via environment interpolation
+    password: ""   # sensitive - provide via environment interpolation
+  replicas: 1
+  persistence:
+    storageClass: nfs-client
+    size: 1Gi
+  management:
+    # Hostname of the RabbitMQ management ingress; defaults to rabbitmq.<first domain>
+    hostname: ""
+    # Source IPs allowed to reach the management UI; empty = unrestricted
+    ipWhitelist: []
+  resources:
+    requests:
+      cpu: "20m"
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: "kubernetes.io/hostname"
+            labelSelector:
+              matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                    - rabbitmq
+  podSecurityContext: {}
+  securityContext: {}
+  extraEnv: []
+  extraVolumes: []
+  extraVolumeMounts: []
+  livenessProbe: {}
+  readinessProbe: {}
+  priorityClassName: ""
+
+# ServiceAccount + Role used by the deploy hook Jobs of the shopsys-app release
+# (cron-suspend needs to scale the cron deployment and wait for its pods).
+deployHooks:
+  rbac:
+    create: true
+    serviceAccountName: deploy-hooks

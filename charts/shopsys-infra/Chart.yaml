@@ -1,0 +1,22 @@
+apiVersion: v2
+name: shopsys-infra
+description: Shopsys Platform infrastructure services (Redis, RabbitMQ) deployed before the application release
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.23.0-0"
+home: https://github.com/shopsys
+sources:
+  - https://github.com/shopsys/deployment
+maintainers:
+  - name: Shopsys
+    url: https://www.shopsys.com
+keywords:
+  - shopsys
+  - e-commerce
+  - redis
+  - rabbitmq
+dependencies:
+  - name: shopsys-common
+    version: 1.0.0
+    repository: file://../shopsys-common

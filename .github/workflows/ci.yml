@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+env:
+  # This package supports Helm 4 only - keep in sync with local tooling
+  HELM_VERSION: v4.2.4
+  HELMFILE_VERSION: v1.7.4
+  KUBECONFORM_VERSION: v0.7.0
+  KUBERNETES_VERSION: 1.31.0
+
+jobs:
+  lint:
+    name: Helm lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Build dependencies
+        run: |
+          helm dependency build charts/shopsys-infra
+          helm dependency build charts/shopsys-app
+      - name: Lint charts
+        # The schema requires project.name and domains, so lint with baseline test values
+        run: |
+          helm lint charts/shopsys-infra -f charts/shopsys-infra/tests/values/required.yaml
+          helm lint charts/shopsys-app -f charts/shopsys-app/tests/values/required.yaml
+
+  unit:
+    name: Helm unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install helm-unittest
+        # Helm 4 verifies plugin signatures by default; helm-unittest is unsigned
+        run: helm plugin install --verify=false https://github.com/helm-unittest/helm-unittest.git
+      - name: Build dependencies
+        run: |
+          helm dependency build charts/shopsys-infra
+          helm dependency build charts/shopsys-app
+      - name: Run unit tests
+        run: helm unittest charts/shopsys-app charts/shopsys-infra
+
+  golden:
+    name: Golden manifest tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install helmfile
+        # helm-diff is not needed here - the golden tests only run `helmfile template`
+        run: |
+          curl -fsSL "https://github.com/helmfile/helmfile/releases/download/${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION#v}_linux_amd64.tar.gz" | tar xz helmfile
+          sudo mv helmfile /usr/local/bin/
+      - name: Run golden tests
+        run: ./tests/run-golden-tests.sh
+
+  kubeconform:
+    name: Manifest validation (kubeconform)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install helmfile and kubeconform
+        run: |
+          curl -fsSL "https://github.com/helmfile/helmfile/releases/download/${HELMFILE_VERSION}/helmfile_${HELMFILE_VERSION#v}_linux_amd64.tar.gz" | tar xz helmfile
+          sudo mv helmfile /usr/local/bin/
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+      - name: Render and validate all golden scenarios
+        run: |
+          ./tests/run-golden-tests.sh --keep-tmp || true
+          find tests/tmp -name '*.yaml' -print0 | xargs -0 kubeconform -strict -summary \
+            -kubernetes-version "${KUBERNETES_VERSION}" \
+            -schema-location default
+
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run shellcheck
+        run: shellcheck deploy/deploy.sh deploy/lib/functions.sh tests/run-golden-tests.sh tools/compare-legacy.sh

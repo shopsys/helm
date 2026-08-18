@@ -1,0 +1,36 @@
+{{- if and .Values.rabbitmq.enabled (or .Values.rabbitmq.management.hostname (gt (len .Values.domains) 0)) }}
+{{- $host := .Values.rabbitmq.management.hostname }}
+{{- if not $host }}
+{{- $host = printf "rabbitmq.%s" (include "shopsys.domain.base" (first .Values.domains).hostname) }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rabbitmq-domain
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.proxyBodySize }}
+    {{- with .Values.rabbitmq.management.ipWhitelist }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ join "," . | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ $host | quote }}
+      secretName: tls-certificate
+  rules:
+    - host: {{ $host | quote }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: rabbitmq
+                port:
+                  number: 15672
+            path: '/'
+            pathType: Prefix
+{{- end }}

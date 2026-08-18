@@ -1,0 +1,18 @@
+{{- /*
+Copy of the domains-urls ConfigMap available to hook Jobs. Pre-install hooks run before
+regular chart resources exist, so hooks cannot mount the regular domains-urls ConfigMap
+on the very first deploy - they mount this hook-scoped copy instead.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: domains-urls-hook
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+data:
+  {{ .Values.app.domainsUrls.filename }}: |
+    {{- include "shopsys.domainsUrls.data" . | nindent 4 }}

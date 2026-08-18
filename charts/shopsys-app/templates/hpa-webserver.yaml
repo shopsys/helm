@@ -1,0 +1,23 @@
+{{- if .Values.webserver.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: webserver-php-fpm
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: webserver-php-fpm
+  minReplicas: {{ .Values.webserver.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.webserver.autoscaling.maxReplicas }}
+  metrics:
+    - type: ContainerResource
+      containerResource:
+        name: cpu
+        container: php-fpm
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.webserver.autoscaling.targetCPUUtilization }}
+{{- end }}

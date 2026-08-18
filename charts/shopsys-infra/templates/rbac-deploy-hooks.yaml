@@ -1,0 +1,41 @@
+{{- if .Values.deployHooks.rbac.create }}
+# ServiceAccount used by the deploy hook Jobs of the shopsys-app release.
+# Lives in the infra chart so it exists before the first application upgrade runs its hooks.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.deployHooks.rbac.serviceAccountName }}
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.deployHooks.rbac.serviceAccountName }}
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale"]
+    verbs: ["get", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.deployHooks.rbac.serviceAccountName }}
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Values.deployHooks.rbac.serviceAccountName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.deployHooks.rbac.serviceAccountName }}
+{{- end }}
