@@ -16,13 +16,7 @@ storefront:
     repository: {{ env "STOREFRONT_TAG" | quote }}
 {{- end }}
 
-{{- if eq (env "GCLOUD_DEPLOY") "true" }}
-registry:
-  server: eu.gcr.io
-  username: _json_key
-  password: {{ env "GCLOUD_CONTAINER_REGISTRY_ACCOUNT" | quote }}
-  email: {{ env "GCLOUD_CONTAINER_REGISTRY_EMAIL" | quote }}
-{{- else if env "CI_REGISTRY" }}
+{{- if env "CI_REGISTRY" }}
 registry:
   server: {{ env "CI_REGISTRY" | quote }}
   username: {{ env "DEPLOY_REGISTER_USER" | quote }}

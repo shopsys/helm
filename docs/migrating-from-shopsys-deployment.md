@@ -97,3 +97,6 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     untouched (selectors are immutable on existing Deployments).
 17. **Redis is the first container** of its pod (exporter second) so `kubectl logs` and
     `kubectl exec` target the `redis` container by default (adopted from shopsys/deployment#74).
+18. **GCloud registry support removed** (`GCLOUD_DEPLOY` + `GCLOUD_CONTAINER_REGISTRY_*`) —
+    unused feature, dropped upstream too (shopsys/deployment#77). Only
+    `CI_REGISTRY`/`DEPLOY_REGISTER_*` credentials remain.

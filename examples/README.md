@@ -18,7 +18,7 @@ A project needs three things:
    | Variable | Purpose |
    |---|---|
    | `TAG`, `STOREFRONT_TAG` | full image references built by the pipeline |
-   | `CI_REGISTRY`, `DEPLOY_REGISTER_USER`, `DEPLOY_REGISTER_PASSWORD` | registry pull secret (or `GCLOUD_DEPLOY=true` + `GCLOUD_CONTAINER_REGISTRY_*`) |
+   | `CI_REGISTRY`, `DEPLOY_REGISTER_USER`, `DEPLOY_REGISTER_PASSWORD` | registry pull secret |
    | `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS` | RabbitMQ credentials |
    | `BASIC_AUTH_PATH` | path to the htpasswd file (checked into the project like before) |
    | `FIRST_DEPLOY=1` | only for the very first deploy of an instance (`FIRST_DEPLOY_LOAD_DEMO_DATA=1` to load demo data) |
