@@ -196,19 +196,6 @@ spec:
             name: redis
             defaultMode: 0755
       containers:
-        - name: redis-exporter
-          image: "oliver006/redis_exporter:v1.89.0"
-          imagePullPolicy: IfNotPresent
-          ports:
-            - name: exporter
-              containerPort: 9121
-              protocol: TCP
-          resources:
-            limits:
-              memory: 128Mi
-            requests:
-              cpu: 10m
-              memory: 128Mi
         - name: redis
           image: "redis:7.4-alpine"
           ports:
@@ -245,6 +232,19 @@ spec:
             requests:
               cpu: 100m
               memory: 2500Mi
+        - name: redis-exporter
+          image: "oliver006/redis_exporter:v1.89.0"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: exporter
+              containerPort: 9121
+              protocol: TCP
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 128Mi
 
 ---
 # Source: shopsys-infra/templates/statefulset-rabbitmq.yaml

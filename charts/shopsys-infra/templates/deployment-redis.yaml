@@ -35,15 +35,6 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       containers:
-        - name: redis-exporter
-          image: {{ include "shopsys.image" .Values.redis.exporter.image | quote }}
-          imagePullPolicy: {{ .Values.redis.exporter.image.pullPolicy | default "IfNotPresent" }}
-          ports:
-            - name: exporter
-              containerPort: 9121
-              protocol: TCP
-          resources:
-            {{- toYaml .Values.redis.exporter.resources | nindent 12 }}
         - name: redis
           image: {{ include "shopsys.image" .Values.redis.image | quote }}
           {{- with .Values.redis.image.pullPolicy }}
@@ -100,4 +91,15 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.redis.resources | nindent 12 }}
+{{- /* Exporter is intentionally the second container - redis is the default target
+       of kubectl logs/exec (see shopsys/deployment#74) */}}
+        - name: redis-exporter
+          image: {{ include "shopsys.image" .Values.redis.exporter.image | quote }}
+          imagePullPolicy: {{ .Values.redis.exporter.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: exporter
+              containerPort: 9121
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.redis.exporter.resources | nindent 12 }}
 {{- end }}

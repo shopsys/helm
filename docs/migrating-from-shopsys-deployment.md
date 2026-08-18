@@ -95,3 +95,5 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
 16. **Standard Helm labels** (`app.kubernetes.io/name|instance|managed-by`, `helm.sh/chart`)
     are added to every resource. Purely additive — the legacy `app:` selector labels are kept
     untouched (selectors are immutable on existing Deployments).
+17. **Redis is the first container** of its pod (exporter second) so `kubectl logs/exec`
+    target redis by default (adopted from shopsys/deployment#74).
