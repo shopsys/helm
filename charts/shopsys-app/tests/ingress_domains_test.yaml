@@ -76,6 +76,19 @@ tests:
           path: metadata.annotations["nginx.ingress.kubernetes.io/satisfy"]
           value: any
 
+  - it: points the auth-secret annotation to an existing secret when referenced
+    set:
+      security:
+        httpAuth:
+          enabled: true
+          existingSecret: my-auth
+      domains:
+        - hostname: dev.example.com
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/auth-secret"]
+          value: my-auth
+
   - it: forces basic auth per domain even when globally disabled
     set:
       domains:

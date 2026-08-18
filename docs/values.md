@@ -53,7 +53,10 @@ ingress:
 security:
   httpAuth:
     enabled: false           # dev environments: true (former RUNNING_PRODUCTION=0)
-    htpasswd: ""             # sensitive → BASIC_AUTH_PATH env var
+    htpasswd: ""             # raw content, sensitive → BASIC_AUTH_PATH env var
+    username: ""             # OR let the chart generate the htpasswd entry (bcrypt)
+    password: ""             #    → HTTP_AUTH_CREDENTIALS env var ("user:password")
+    existingSecret: ""       # OR reference an externally managed secret (key `auth`)
   whitelistIps: []           # IPs bypassing basic auth
   cloudflare: { enabled: false }
   mcp: { enabled: true, ipWhitelist: [] }
@@ -103,7 +106,7 @@ an environment file — they are not merged. Maps merge deeply.
 | `ENABLE_AUTOSCALING`, `MIN/MAX_*_REPLICAS` | `webserver.autoscaling` + `storefront.autoscaling` (independent) |
 | `PHP_FPM_CPU_REQUEST` / `STOREFRONT_CPU_REQUEST` / `DOWNSCALE_RESOURCE` | `*.resources.requests` in environment values |
 | `DEPLOY_REGISTER_USER/PASSWORD`, `CI_REGISTRY` | env vars → `registry.*` (runtime.yaml.gotmpl); generic `REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL` take precedence and work with any registry (GCR/GAR: username `_json_key`, password = service account JSON) |
-| `BASIC_AUTH_PATH` | env var → `security.httpAuth.htpasswd` (runtime.yaml.gotmpl) |
+| `BASIC_AUTH_PATH` | env var → `security.httpAuth.htpasswd` (runtime.yaml.gotmpl); optional — without it `HTTP_AUTH_CREDENTIALS` ("user:password") generates the htpasswd entry in-chart, or use `security.httpAuth.existingSecret` |
 | `WHITELIST_IPS` + `DEFAULT_WHITELIST_IPS` | `security.whitelistIps` (single committed list) |
 | `FORCE_HTTP_AUTH_IN_PRODUCTION` | `domains[].forceHttpAuth` |
 | `USING_CLOUDFLARE` / `CLOUDFLARE_EXCLUDED_DOMAINS` | `security.cloudflare.enabled` / `domains[].cloudflareExcluded` |

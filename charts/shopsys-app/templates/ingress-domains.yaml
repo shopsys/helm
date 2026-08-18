@@ -25,7 +25,7 @@ metadata:
     {{- end }}
     {{- if $httpAuth }}
     nginx.ingress.kubernetes.io/auth-type: basic
-    nginx.ingress.kubernetes.io/auth-secret: http-auth
+    nginx.ingress.kubernetes.io/auth-secret: {{ include "shopsys.httpAuthSecretName" $ }}
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required - ok
     {{- if $whitelist }}
     {{- /* Whitelisted IPs may bypass the HTTP basic auth */}}

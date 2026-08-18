@@ -112,7 +112,9 @@ per-domain website check (domain URLs + auth state are parsed from the rendered 
 - Golden scenarios live in `tests/golden/scenarios/<name>/environments/` (a self-contained
   helmfile environments dir selected via `SHOPSYS_ENV_DIR`) + `expected/` snapshots.
   Determinism: fixed env vars in the runner + `DEPLOY_TIMESTAMP=1234567890`; never use
-  `lookup`, `now`, or `randAlphaNum` in templates.
+  `lookup`, `now`, or `randAlphaNum` in templates. The `htpasswd` function is salted
+  (nondeterministic) — golden scenarios must use raw `security.httpAuth.htpasswd` content,
+  never `username`/`password`.
 - Any intentional template change requires `./tests/run-golden-tests.sh --update` and the
   regenerated snapshots belong to the same commit.
 - helm-unittest suites live in `charts/*/tests/*_test.yaml`; every suite loads

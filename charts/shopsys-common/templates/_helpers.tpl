@@ -72,6 +72,42 @@ helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- if and .root.Values.security.cloudflare.enabled (not .domain.cloudflareExcluded) -}}1{{- end -}}
 {{- end }}
 
+{{/* Name of the Secret holding the htpasswd content for HTTP basic auth.
+     An externally managed secret (security.httpAuth.existingSecret) takes precedence
+     over the chart-managed "http-auth" secret. */}}
+{{- define "shopsys.httpAuthSecretName" -}}
+{{- .Values.security.httpAuth.existingSecret | default "http-auth" -}}
+{{- end }}
+
+{{/* Effective htpasswd content of the chart-managed http-auth secret.
+     Raw content (security.httpAuth.htpasswd) wins; otherwise the entry is generated
+     from username + password via the Sprig htpasswd function (bcrypt).
+     NOTE: the generated hash uses a random salt, so it is NOT deterministic across
+     renders - never use username/password in golden test scenarios. */}}
+{{- define "shopsys.httpAuthContent" -}}
+{{- $auth := .Values.security.httpAuth -}}
+{{- if $auth.htpasswd -}}
+{{- $auth.htpasswd -}}
+{{- else if and $auth.username $auth.password -}}
+{{- htpasswd $auth.username $auth.password -}}
+{{- end -}}
+{{- end }}
+
+{{/* Pod imagePullSecrets list. The chart-managed "dockerregistry" entry is replaced
+     by registry.existingSecret when the project brings its own pull secret. */}}
+{{- define "shopsys.imagePullSecrets" -}}
+{{- $existing := (.Values.registry).existingSecret | default "" -}}
+{{- $list := list -}}
+{{- range .Values.imagePullSecrets -}}
+{{- if and (eq . "dockerregistry") $existing -}}
+{{- $list = append $list (dict "name" $existing) -}}
+{{- else -}}
+{{- $list = append $list (dict "name" .) -}}
+{{- end -}}
+{{- end -}}
+{{- toYaml $list -}}
+{{- end }}
+
 {{/* Whether the http-auth secret / annotations are needed at all. Returns "1" or "". */}}
 {{- define "shopsys.httpAuthNeeded" -}}
 {{- $needed := .Values.security.httpAuth.enabled -}}
@@ -197,11 +233,9 @@ securityContext:
 priorityClassName: {{ . }}
 {{- end }}
 {{- if ne .pullSecrets false }}
-{{- with .root.Values.imagePullSecrets }}
+{{- if .root.Values.imagePullSecrets }}
 imagePullSecrets:
-{{- range . }}
-  - name: {{ . }}
-{{- end }}
+  {{- include "shopsys.imagePullSecrets" .root | nindent 2 }}
 {{- end }}
 {{- end }}
 {{- end }}

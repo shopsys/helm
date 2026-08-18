@@ -65,6 +65,21 @@ tests:
           path: spec.template.spec.containers[0].livenessProbe.httpGet.path
           value: /healthz
 
+  - it: replaces the dockerregistry pull secret with an existing one
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      registry:
+        existingSecret: my-pull-secret
+    asserts:
+      - contains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: my-pull-secret
+      - notContains:
+          path: spec.template.spec.imagePullSecrets
+          content:
+            name: dockerregistry
+
   - it: propagates pod annotations and labels
     template: templates/deployment-webserver-php-fpm.yaml
     set:

@@ -22,7 +22,8 @@
 #   REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL  registry credentials (any registry);
 #     GitLab fallback: CI_REGISTRY + DEPLOY_REGISTER_USER/PASSWORD
 #   RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS
-#   BASIC_AUTH_PATH                          htpasswd file for HTTP basic auth
+#   BASIC_AUTH_PATH                          raw htpasswd file (optional - without it
+#     HTTP_AUTH_CREDENTIALS "user:password" generates the htpasswd entry in-chart)
 #   FIRST_DEPLOY, FIRST_DEPLOY_LOAD_DEMO_DATA
 #   DISPLAY_FINAL_CONFIGURATION              1 = print rendered manifests
 #   HTTP_AUTH_CREDENTIALS                    credentials for the website check (default username:password)

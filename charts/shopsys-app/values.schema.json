@@ -44,7 +44,10 @@
           "type": "object",
           "properties": {
             "enabled": { "type": "boolean" },
-            "htpasswd": { "type": "string" }
+            "htpasswd": { "type": "string" },
+            "username": { "type": "string" },
+            "password": { "type": "string" },
+            "existingSecret": { "type": "string" }
           }
         },
         "whitelistIps": { "type": "array", "items": { "type": "string" } },
@@ -59,6 +62,17 @@
             "ipWhitelist": { "type": "array", "items": { "type": "string" } }
           }
         }
+      }
+    },
+    "registry": {
+      "type": "object",
+      "properties": {
+        "create": { "type": "boolean" },
+        "server": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "email": { "type": "string" },
+        "existingSecret": { "type": "string" }
       }
     },
     "app": {
