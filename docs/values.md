@@ -61,7 +61,8 @@ security:
   mcp: { enabled: true, ipWhitelist: [] }
   feApiKeys: {}              # optional declarative keypair
 
-registry: {...}              # image pull secret; sensitive → env vars
+registry:                    # image pull secret; credentials sensitive → env vars
+  existingSecret: ""         # OR reference an externally managed pull secret
 
 app:                         # shared backend configuration
   env: {}                    # backend env vars (webserver, cron, consumers, migration)
