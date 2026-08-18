@@ -16,7 +16,19 @@ storefront:
     repository: {{ env "STOREFRONT_TAG" | quote }}
 {{- end }}
 
-{{- if env "CI_REGISTRY" }}
+{{- /*
+Image pull secret credentials - registry-agnostic (Docker Hub, GHCR, GitLab, Harbor,
+GCR/GAR via username "_json_key" + the service account JSON as password, ...).
+Generic REGISTRY_* variables take precedence; the GitLab-flavored
+CI_REGISTRY/DEPLOY_REGISTER_* names are kept as a fallback for existing pipelines.
+*/}}
+{{- if env "REGISTRY_SERVER" }}
+registry:
+  server: {{ env "REGISTRY_SERVER" | quote }}
+  username: {{ env "REGISTRY_USERNAME" | quote }}
+  password: {{ env "REGISTRY_PASSWORD" | quote }}
+  email: {{ env "REGISTRY_EMAIL" | quote }}
+{{- else if env "CI_REGISTRY" }}
 registry:
   server: {{ env "CI_REGISTRY" | quote }}
   username: {{ env "DEPLOY_REGISTER_USER" | quote }}

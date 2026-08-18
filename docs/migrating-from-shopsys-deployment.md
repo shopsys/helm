@@ -97,6 +97,9 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     untouched (selectors are immutable on existing Deployments).
 17. **Redis is the first container** of its pod (exporter second) so `kubectl logs` and
     `kubectl exec` target the `redis` container by default (adopted from shopsys/deployment#74).
-18. **GCloud registry support removed** (`GCLOUD_DEPLOY` + `GCLOUD_CONTAINER_REGISTRY_*`) —
-    unused feature, dropped upstream too (shopsys/deployment#77). Only
-    `CI_REGISTRY`/`DEPLOY_REGISTER_*` credentials remain.
+18. **GCloud-specific registry branch removed** (`GCLOUD_DEPLOY` +
+    `GCLOUD_CONTAINER_REGISTRY_*`) — dropped upstream too (shopsys/deployment#77). The pull
+    secret is registry-agnostic: set the generic `REGISTRY_SERVER/USERNAME/PASSWORD/EMAIL`
+    env vars (works with any registry — GCR/GAR via username `_json_key` and the service
+    account JSON as the password); the GitLab-flavored `CI_REGISTRY`/`DEPLOY_REGISTER_*`
+    variables keep working as a fallback.
