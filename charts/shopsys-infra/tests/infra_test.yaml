@@ -7,17 +7,20 @@ templates:
   - templates/ingress-rabbitmq.yaml
   - templates/rbac-deploy-hooks.yaml
 tests:
-  - it: runs redis with the exporter sidecar and health probes
+  - it: runs redis as the first container with the exporter sidecar and health probes
     template: templates/deployment-redis.yaml
     asserts:
       - equal:
           path: spec.template.spec.containers[0].name
-          value: redis-exporter
+          value: redis
       - equal:
-          path: spec.template.spec.containers[1].image
+          path: spec.template.spec.containers[0].image
           value: "redis:7.4-alpine"
+      - equal:
+          path: spec.template.spec.containers[1].name
+          value: redis-exporter
       - matchRegex:
-          path: spec.template.spec.containers[1].livenessProbe.exec.command[2]
+          path: spec.template.spec.containers[0].livenessProbe.exec.command[2]
           pattern: liveness.sh
 
   - it: provisions rabbitmq with persistent storage and credentials
