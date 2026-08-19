@@ -121,6 +121,11 @@ webserver:
       maxUnavailable: 0
     type: RollingUpdate
   phpFpm:
+    # The application image's user is project-specific, so only settings that are safe
+    # for both root and non-root processes are defaulted here; runAsNonRoot /
+    # readOnlyRootFilesystem are opt-in per project after verifying the image.
+    securityContext:
+      allowPrivilegeEscalation: false
     resources:
       limits:
         memory: 2Gi
@@ -169,6 +174,19 @@ webserver:
       repository: nginx
       tag: 1.29-alpine
       pullPolicy: ""
+    # Port of the stub_status health server (probes); must stay above 1024 because
+    # nginx runs unprivileged.
+    healthPort: 8081
+    # nginx runs fully hardened: the chart-shipped nginx.conf uses /tmp for the pid file
+    # and the pod mounts emptyDirs over /var/cache/nginx and /tmp for the read-only root.
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 101       # nginx user of the stock image
+      runAsGroup: 101
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      readOnlyRootFilesystem: true
     resources:
       limits:
         memory: 300Mi
@@ -207,7 +225,9 @@ webserver:
                   values:
                     - redis
   topologySpreadConstraints: []
-  podSecurityContext: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
   extraEnv: []
   extraVolumes: []
   priorityClassName: ""
@@ -274,8 +294,12 @@ storefront:
                   values:
                     - storefront
   topologySpreadConstraints: []
-  podSecurityContext: {}
-  securityContext: {}
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  # The storefront image's user is project-specific - see webserver.phpFpm.securityContext.
+  securityContext:
+    allowPrivilegeEscalation: false
   extraEnv: []
   extraVolumes: []
   extraVolumeMounts: []
@@ -366,8 +390,12 @@ consumers:
                   values:
                     - background
     topologySpreadConstraints: []
-    podSecurityContext: {}
-    securityContext: {}
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    # The application image's user is project-specific - see webserver.phpFpm.securityContext.
+    securityContext:
+      allowPrivilegeEscalation: false
     extraEnv: []
     extraVolumes: []
     extraVolumeMounts: []

@@ -22,6 +22,9 @@ spec:
       # Runs under the namespace default SA (kept consistent with the migration hook);
       # it never talks to the API, so the token is not mounted.
       automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: domains-urls
           configMap:
@@ -29,6 +32,8 @@ spec:
       containers:
         - name: post-deploy
           image: {{ include "shopsys.image" .Values.webserver.image | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
           command:
             - sh
             - -c

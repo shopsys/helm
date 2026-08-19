@@ -52,6 +52,11 @@ spec:
           secret:
             secretName: fe-api-keys
             defaultMode: 0644
+        # Writable paths for the read-only nginx root filesystem (temp dirs + pid file)
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
         {{- with .Values.webserver.extraVolumes }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -59,6 +64,10 @@ spec:
         - name: copy-source-codes-to-volume
           image: {{ include "shopsys.image" .Values.webserver.image | quote }}
           command: ["sh", "-c", "cp -r -n /var/www/html/. /tmp/source-codes"]
+          {{- with .Values.webserver.phpFpm.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: source-codes
               mountPath: /tmp/source-codes
@@ -70,6 +79,10 @@ spec:
           name: php-fpm
           imagePullPolicy: {{ .Values.webserver.image.pullPolicy | default "IfNotPresent" }}
           workingDir: /var/www/html
+          {{- with .Values.webserver.phpFpm.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           lifecycle:
             postStart:
               exec:
@@ -109,20 +122,26 @@ spec:
           {{- with .Values.webserver.nginx.image.pullPolicy }}
           imagePullPolicy: {{ . }}
           {{- end }}
+          {{- with .Values.webserver.nginx.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - containerPort: 8080
               name: http
+            - containerPort: {{ .Values.webserver.nginx.healthPort }}
+              name: health
           livenessProbe:
             initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 5
             httpGet:
               path: /health
-              port: 80
+              port: {{ .Values.webserver.nginx.healthPort }}
           readinessProbe:
             httpGet:
               path: /health
-              port: 80
+              port: {{ .Values.webserver.nginx.healthPort }}
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
@@ -135,6 +154,10 @@ spec:
               subPath: project-nginx.conf
             - name: source-codes
               mountPath: /var/www/html
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-tmp
+              mountPath: /tmp
             {{- with .Values.webserver.nginx.extraVolumeMounts }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

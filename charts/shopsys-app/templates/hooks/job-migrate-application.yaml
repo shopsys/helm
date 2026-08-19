@@ -41,6 +41,9 @@ spec:
       # chart ServiceAccount, which does not exist yet); it never talks to the API, so the
       # token is not mounted.
       automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: domains-urls
           configMap:
@@ -49,6 +52,8 @@ spec:
         - name: migrate-application
           image: {{ include "shopsys.image" .Values.webserver.image | quote }}
           command: ["sh", "-c", {{ $command | quote }}]
+          securityContext:
+            allowPrivilegeEscalation: false
           {{- /* Hook-scoped Secret copy - the regular app-secret-env does not exist yet
                  on the first install and is not yet updated during pre-upgrade */}}
           {{- if .Values.app.secretEnv }}

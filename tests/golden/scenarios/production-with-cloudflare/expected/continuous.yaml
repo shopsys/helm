@@ -215,6 +215,12 @@ spec:
         app: redis
     spec:
       serviceAccountName: shopsys-infra
+      securityContext:
+        runAsGroup: 1000
+        runAsNonRoot: true
+        runAsUser: 999
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: health
           configMap:
@@ -239,6 +245,12 @@ spec:
               subPath: redis.conf
           args:
             - /usr/local/etc/redis/redis.conf
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
           livenessProbe:
             initialDelaySeconds: 30
             timeoutSeconds: 5
@@ -264,6 +276,12 @@ spec:
         - name: redis-exporter
           image: "oliver006/redis_exporter:v1.89.0"
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
           ports:
             - name: exporter
               containerPort: 9121
@@ -310,6 +328,9 @@ spec:
                   - rabbitmq
               topologyKey: kubernetes.io/hostname
             weight: 100
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
         - name: dockerregistry
       containers:
@@ -337,6 +358,8 @@ spec:
             requests:
               cpu: 20m
           
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq
@@ -564,11 +587,13 @@ metadata:
     helm.sh/chart: shopsys-app-1.0.0
 data:
   nginx.conf: |
-    user  nginx;
+    # No `user` directive - nginx runs as the unprivileged nginx user (runAsUser 101)
+    # enforced by the container securityContext; the pid file lives on the writable /tmp
+    # emptyDir because the root filesystem is read-only.
     worker_processes 2;
     
     error_log   /dev/stderr warn;
-    pid         /var/run/nginx.pid;
+    pid         /tmp/nginx.pid;
     
     events {
         # determines how much clients will be served per worker
@@ -630,7 +655,8 @@ data:
     }
     
     server {
-        listen 80;
+        # Unprivileged health port - nginx runs as a non-root user and cannot bind below 1024
+        listen 8081;
         root /var/www/html/web;
     
         location /health {
@@ -1014,6 +1040,9 @@ spec:
                 values:
                 - background
             weight: 100
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
         - name: dockerregistry
       volumes:
@@ -1090,6 +1119,8 @@ spec:
               cpu: 50m
               memory: 300Mi
           
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: domains-urls
               mountPath: /var/www/html/config/domains_urls.yaml
@@ -1150,6 +1181,9 @@ spec:
                 values:
                 - background
             weight: 100
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
         - name: dockerregistry
       volumes:
@@ -1226,6 +1260,8 @@ spec:
               cpu: 50m
               memory: 300Mi
           
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: domains-urls
               mountPath: /var/www/html/config/domains_urls.yaml
@@ -1421,6 +1457,9 @@ spec:
                   - storefront
               topologyKey: kubernetes.io/hostname
             weight: 100
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
         - name: dockerregistry
       containers:
@@ -1455,6 +1494,8 @@ spec:
               cpu: 500m
               memory: 800Mi
           
+          securityContext:
+            allowPrivilegeEscalation: false
           livenessProbe:
             httpGet:
               path: /api/health
@@ -1503,7 +1544,7 @@ spec:
         
         checksum/domains-urls: 539b3ebe5e9afc8161d48e313792053a135bdcd7e476b10bb1f33ff5412d9131
         checksum/app-env: 637d6b3c885925fd0e6cff83364dc8896279eb5b5aedbb37a174dcaecc413883
-        checksum/nginx: 9ecf1e6dae3c6298687cd65d67e4a9c1a7d57f4b6e38a6250a4077db637ae911
+        checksum/nginx: 005746798ff2c612aaf66b9ce123866ef048a7eac895cc2ffa7fb7b3f2bf885a
         checksum/php-fpm: 593102a5f1a5dc7c7a19ee1aae7bd32f6ee7011a0ed0ea732f25f8b2a8251ca7
       labels:
         app: webserver-php-fpm
@@ -1532,6 +1573,9 @@ spec:
                   - webserver-php-fpm
               topologyKey: kubernetes.io/hostname
             weight: 100
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       imagePullSecrets:
         - name: dockerregistry
       hostAliases:
@@ -1559,10 +1603,17 @@ spec:
           secret:
             secretName: fe-api-keys
             defaultMode: 0644
+        # Writable paths for the read-only nginx root filesystem (temp dirs + pid file)
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
       initContainers:
         - name: copy-source-codes-to-volume
           image: "v1.0.0"
           command: ["sh", "-c", "cp -r -n /var/www/html/. /tmp/source-codes"]
+          securityContext:
+            allowPrivilegeEscalation: false
           volumeMounts:
             - name: source-codes
               mountPath: /tmp/source-codes
@@ -1574,6 +1625,8 @@ spec:
           name: php-fpm
           imagePullPolicy: IfNotPresent
           workingDir: /var/www/html
+          securityContext:
+            allowPrivilegeEscalation: false
           lifecycle:
             postStart:
               exec:
@@ -1642,20 +1695,31 @@ spec:
 
         - image: "nginx:1.29-alpine"
           name: webserver
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 101
+            runAsNonRoot: true
+            runAsUser: 101
           ports:
             - containerPort: 8080
               name: http
+            - containerPort: 8081
+              name: health
           livenessProbe:
             initialDelaySeconds: 30
             periodSeconds: 5
             timeoutSeconds: 5
             httpGet:
               path: /health
-              port: 80
+              port: 8081
           readinessProbe:
             httpGet:
               path: /health
-              port: 80
+              port: 8081
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 5
@@ -1668,6 +1732,10 @@ spec:
               subPath: project-nginx.conf
             - name: source-codes
               mountPath: /var/www/html
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-tmp
+              mountPath: /tmp
           lifecycle:
             preStop:
               exec:
@@ -1927,9 +1995,16 @@ spec:
     spec:
       serviceAccountName: deploy-hooks
       restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: cron-suspend
           image: "rancher/kubectl:v1.33.13"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - /bin/sh
             - -c
@@ -1960,6 +2035,9 @@ spec:
       # chart ServiceAccount, which does not exist yet); it never talks to the API, so the
       # token is not mounted.
       automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: domains-urls
           configMap:
@@ -1968,6 +2046,8 @@ spec:
         - name: migrate-application
           image: "v1.0.0"
           command: ["sh", "-c", "cd /var/www/html && ./phing -verbose db-migrations-count-with-maintenance build-deploy-part-2-db-dependent"]
+          securityContext:
+            allowPrivilegeEscalation: false
           envFrom:
             - secretRef:
                 name: app-secret-env-hook
@@ -2031,6 +2111,9 @@ spec:
       # Runs under the namespace default SA (kept consistent with the migration hook);
       # it never talks to the API, so the token is not mounted.
       automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: domains-urls
           configMap:
@@ -2038,6 +2121,8 @@ spec:
       containers:
         - name: post-deploy
           image: "v1.0.0"
+          securityContext:
+            allowPrivilegeEscalation: false
           command:
             - sh
             - -c
