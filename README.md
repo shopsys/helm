@@ -26,6 +26,11 @@ examples/                what a consuming project copies
 
 - **Helm 4** (the package supports Helm 4 only), helmfile ≥ 1.7 with the helm-diff plugin
 - kubectl, yq, curl, openssl (used by the deploy wrapper)
+- **ingress-nginx with `allow-snippet-annotations: true`** (and `annotations-risk-level:
+  Critical` on ≥ 1.12) — the e-shop ingresses use a `configuration-snippet` to guarantee the
+  https-first redirect chain (the built-in redirect annotations redirect before the HTTPS
+  upgrade, see [kubernetes/ingress-nginx#6340](https://github.com/kubernetes/ingress-nginx/issues/6340));
+  on a controller with default settings the admission webhook rejects these ingresses
 
 ## Quick start
 

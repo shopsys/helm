@@ -39,6 +39,16 @@ Helm/Helmfile package.
      `meta.helm.sh/release-name` / `release-namespace` and label
      `app.kubernetes.io/managed-by: Helm` (see Helm docs on adoption).
 
+## Cluster requirements
+
+- The ingress-nginx controller must allow snippet annotations
+  (`allow-snippet-annotations: true`; on ingress-nginx ≥ 1.12 additionally
+  `annotations-risk-level: Critical`). The redirect chain is implemented via
+  `configuration-snippet` **on purpose** — the built-in `from-to-www-redirect`/`app-root`
+  annotations redirect before the HTTPS upgrade (kubernetes/ingress-nginx#6340, unresolved;
+  the ingress-nginx repository is archived). Verify the controller configuration before the
+  first deploy: with default settings the admission webhook rejects the e-shop ingresses.
+
 ## Helm hook leftovers
 
 Hook resources are not part of the managed release: after a deploy (and after

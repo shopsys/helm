@@ -17,7 +17,11 @@ metadata:
     ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: {{ $.Values.ingress.clusterIssuer }}
     nginx.ingress.kubernetes.io/proxy-body-size: {{ $.Values.ingress.proxyBodySize }}
-    {{- /* Redirect http to https and redirect between the www and non-www variant of the domain */}}
+    {{- /* Redirect http to https and redirect between the www and non-www variant of the
+           domain. Implemented via configuration-snippet ON PURPOSE - do not replace with
+           from-to-www-redirect: the built-in redirect annotations redirect BEFORE the HTTPS
+           upgrade, producing an insecure http->http->https chain (kubernetes/ingress-nginx#6340,
+           unresolved). Requires allow-snippet-annotations: true on the controller. */}}
     {{- if hasPrefix "www." $base }}
     nginx.ingress.kubernetes.io/configuration-snippet: {{ `if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^(?!www\.)(?<domain>.+)$) { return 308 https://www.$domain$request_uri; }` | quote }}
     {{- else }}
