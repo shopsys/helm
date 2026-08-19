@@ -281,9 +281,6 @@ spec:
       app: rabbitmq
   template:
     metadata:
-      annotations:
-        # Roll the pod when the credentials change (a secretKeyRef alone does not)
-        checksum/rabbitmq-credentials: 3aa8bc1a65ea72cfc71f504a91952b46415de01c987c90fcad0ccf81f3819f1d
       labels:
         app: rabbitmq
     spec:
@@ -1662,6 +1659,27 @@ spec:
             path: '/.well-known/oauth-protected-resource'
             pathType: ImplementationSpecific
 ---
+# Source: shopsys-app/templates/hooks/secret-app-env-hook.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secret-env-hook
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: before-hook-creation
+type: Opaque
+stringData:
+  APP_SECRET: "test-app-secret-key"
+  DATABASE_PASSWORD: "test-db-password"
+  S3_SECRET: "test-s3-secret"
+
+---
 # Source: shopsys-app/templates/hooks/configmap-domains-urls-hook.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -1742,10 +1760,9 @@ spec:
         - name: migrate-application
           image: "v1.0.0"
           command: ["sh", "-c", "cd /var/www/html && ./phing -verbose db-migrations-count-with-maintenance build-deploy-part-2-db-dependent"]
-          
           envFrom:
             - secretRef:
-                name: app-secret-env
+                name: app-secret-env-hook
           env:
             
             - name: DATABASE_HOST
