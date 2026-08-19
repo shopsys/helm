@@ -27,10 +27,17 @@ examples/                what a consuming project copies
 - **Helm 4** (the package supports Helm 4 only), helmfile ≥ 1.7 with the helm-diff plugin
 - kubectl, yq, curl, openssl (used by the deploy wrapper)
 - **ingress-nginx with `allow-snippet-annotations: true`** (and `annotations-risk-level:
-  Critical` on ≥ 1.12) — the e-shop ingresses use a `configuration-snippet` to guarantee the
-  https-first redirect chain (the built-in redirect annotations redirect before the HTTPS
-  upgrade, see [kubernetes/ingress-nginx#6340](https://github.com/kubernetes/ingress-nginx/issues/6340));
-  on a controller with default settings the admission webhook rejects these ingresses
+  Critical` on ≥ 1.12) — with the default `ingress.redirectStyle: snippet`, the e-shop
+  ingresses use a `configuration-snippet` to guarantee the https-first redirect chain (the
+  built-in redirect annotations redirect before the HTTPS upgrade, see
+  [kubernetes/ingress-nginx#6340](https://github.com/kubernetes/ingress-nginx/issues/6340));
+  on a controller with default settings the admission webhook rejects these ingresses.
+  ⚠️ Enabling snippets is a **controller-wide, Critical-risk capability**: anyone allowed to
+  create Ingresses on that controller can inject NGINX directives, which upstream warns may
+  expose controller/cluster secrets — Ingress authors must be trusted. On shared clusters use
+  a dedicated controller or tightly restricted Ingress RBAC, or switch to
+  `ingress.redirectStyle: native` (built-in `from-to-www-redirect`; no snippets needed, but
+  the www redirect happens before the HTTPS upgrade — an insecure `http → http → https` hop)
 
 ## Quick start
 

@@ -41,13 +41,22 @@ Helm/Helmfile package.
 
 ## Cluster requirements
 
-- The ingress-nginx controller must allow snippet annotations
-  (`allow-snippet-annotations: true`; on ingress-nginx ≥ 1.12 additionally
-  `annotations-risk-level: Critical`). The redirect chain is implemented via
+- With the default `ingress.redirectStyle: snippet`, the ingress-nginx controller must
+  allow snippet annotations (`allow-snippet-annotations: true`; on ingress-nginx ≥ 1.12
+  additionally `annotations-risk-level: Critical`). The redirect chain is implemented via
   `configuration-snippet` **on purpose** — the built-in `from-to-www-redirect`/`app-root`
   annotations redirect before the HTTPS upgrade (kubernetes/ingress-nginx#6340, unresolved;
   the ingress-nginx repository is archived). Verify the controller configuration before the
   first deploy: with default settings the admission webhook rejects the e-shop ingresses.
+  **Trust boundary:** allowing snippets is controller-wide — any user who can create an
+  Ingress on that controller can inject NGINX directives, which upstream warns may expose
+  controller/cluster secrets. Only enable it where all Ingress authors are trusted; on
+  shared clusters use a dedicated controller or tightly restricted Ingress RBAC.
+  Alternatively set `ingress.redirectStyle: native` to use the built-in
+  `from-to-www-redirect` (no snippets required, at the cost of an insecure
+  `http → http → https` hop for the www redirect).
+- Long-term: ingress-nginx is archived — the migration to Gateway API / a successor
+  controller is tracked separately (see the "Gateway API migration" issue).
 
 ## Helm hook leftovers
 
