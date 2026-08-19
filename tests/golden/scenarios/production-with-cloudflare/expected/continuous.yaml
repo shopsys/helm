@@ -1021,6 +1021,12 @@ spec:
               value: "https://s3.example.com"
             - name: TRUSTED_PROXY
               value: "10.0.0.0/8"
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 300Mi
           
           volumeMounts:
             - name: domains-urls
@@ -1151,6 +1157,12 @@ spec:
               value: "https://s3.example.com"
             - name: TRUSTED_PROXY
               value: "10.0.0.0/8"
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 50m
+              memory: 300Mi
           
           volumeMounts:
             - name: domains-urls
@@ -1285,6 +1297,12 @@ spec:
               value: "https://s3.example.com"
             - name: TRUSTED_PROXY
               value: "10.0.0.0/8"
+          resources:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 300Mi
           volumeMounts:
             - name: domains-urls
               mountPath: /var/www/html/config/domains_urls.yaml

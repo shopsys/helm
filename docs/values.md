@@ -76,8 +76,10 @@ app:                         # shared backend configuration
 
 webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers
 storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret)
-cron:                        # component + `instances: [{name, schedule}]`
-consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`
+cron:                        # component + `instances: [{name, schedule}]`;
+                             #   default resources: requests 100m/300Mi, limits 1Gi memory
+consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`;
+                             #   default resources: requests 50m/300Mi, limits 1Gi memory
 redis:                       # infra component + `config` (redis.conf)
 rabbitmq:                    # infra component + auth/persistence/management
 

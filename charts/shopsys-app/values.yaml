@@ -274,7 +274,14 @@ cron:
       maxSurge: 1
       maxUnavailable: 0
     type: RollingUpdate
-  resources: {}
+  # Conservative defaults (same PHP application image as the webserver); tune per project
+  # from real metrics. The legacy package shipped no requests/limits (BestEffort pods).
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: "100m"
+      memory: 300Mi
   securityContext:
     runAsUser: 0
   podAnnotations: {}
@@ -308,7 +315,14 @@ consumers:
     timeLimit: 300
     terminationGracePeriodSeconds: 300
     progressDeadlineSeconds: 600
-    resources: {}
+    # Conservative defaults (same PHP application image as the webserver); override per
+    # instance or per environment. The legacy package shipped no requests/limits.
+    resources:
+      limits:
+        memory: 1Gi
+      requests:
+        cpu: "50m"
+        memory: 300Mi
     podAnnotations: {}
     podLabels: {}
     nodeSelector: {}
