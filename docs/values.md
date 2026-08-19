@@ -25,7 +25,7 @@ Every workload component (`webserver`, `storefront`, `cron`, `consumers.defaults
 | `autoscaling: {enabled, minReplicas, maxReplicas, targetCPUUtilization}` | per-component HPA (webserver + storefront) |
 | `resources` | container resources |
 | `podAnnotations` / `podLabels` | extra pod metadata |
-| `nodeSelector` / `tolerations` / `affinity` / `priorityClassName` | scheduling |
+| `nodeSelector` / `tolerations` / `affinity` / `topologySpreadConstraints` / `priorityClassName` | scheduling |
 | `extraEnv` | extra env entries (raw list, supports `valueFrom`) |
 | `extraVolumes` / `extraVolumeMounts` | additional volumes |
 | `livenessProbe` / `readinessProbe` | probe overrides |
@@ -74,8 +74,11 @@ app:                         # shared backend configuration
   adminUrl: admin
   s3Endpoint: ""
 
-webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers
-storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret)
+webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers;
+                             #   `pdb: {enabled: true, minAvailable: 1}` - rendered only with
+                             #   2+ replicas (autoscaling on or replicas > 1)
+storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret);
+                             #   `pdb` - same as webserver
 cron:                        # component + `instances: [{name, schedule}]`;
                              #   default resources: requests 100m/300Mi, limits 1Gi memory
 consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`;
