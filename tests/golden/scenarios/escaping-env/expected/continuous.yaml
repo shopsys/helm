@@ -424,6 +424,21 @@ data:
   .dockerconfigjson: eyJhdXRocyI6eyJyZWdpc3RyeS5leGFtcGxlLmNvbSI6eyJhdXRoIjoiWkdWd2JHOTVMWFZ6WlhJNlpHVndiRzk1TFhCaGMzTjNiM0prIiwiZW1haWwiOiIiLCJwYXNzd29yZCI6ImRlcGxveS1wYXNzd29yZCIsInVzZXJuYW1lIjoiZGVwbG95LXVzZXIifX19
 
 ---
+# Source: shopsys-app/templates/secret-storefront-env.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: storefront-secret-env
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+type: Opaque
+stringData:
+  SENTRY_DSN: "https://public@sentry.example.com/1"
+
+---
 # Source: shopsys-app/templates/configmap-cron-env.yaml
 apiVersion: v1
 kind: ConfigMap
@@ -1199,6 +1214,7 @@ spec:
         project/app: "storefront"
         project/environment: "production"
         project/name: "myproject"
+        checksum/storefront-secret-env: c9f254e028d801975c4989c2488fb8340dad78674643810bf9d1d87076b8614d
       labels:
         app: storefront
     spec:
@@ -1224,6 +1240,9 @@ spec:
             - name: storefront
               containerPort: 3000
               protocol: TCP
+          envFrom:
+            - secretRef:
+                name: storefront-secret-env
           env:
             
             - name: SENTRY_RELEASE

@@ -125,3 +125,27 @@ tests:
       - matchRegex:
           path: data[".project_env.sh"]
           pattern: "export MAILER_DSN='smtp://user:it'\\\\''s@host'"
+
+  - it: wires storefront secretEnv via envFrom with a rollout checksum
+    template: templates/deployment-storefront.yaml
+    set:
+      storefront:
+        secretEnv:
+          SENTRY_DSN: "https://x@sentry.example.com/1"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: storefront-secret-env
+      - matchRegex:
+          path: spec.template.metadata.annotations["checksum/storefront-secret-env"]
+          pattern: '^[a-f0-9]{64}$'
+
+  - it: has no storefront envFrom or checksum without secretEnv
+    template: templates/deployment-storefront.yaml
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].envFrom
+      - notExists:
+          path: spec.template.metadata.annotations["checksum/storefront-secret-env"]

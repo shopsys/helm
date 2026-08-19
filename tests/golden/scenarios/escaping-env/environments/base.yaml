@@ -27,6 +27,8 @@ app:
 storefront:
   env:
     SENTRY_RELEASE: "479411e7"
+  secretEnv:
+    SENTRY_DSN: "https://public@sentry.example.com/1"
   autoscaling:
     enabled: true
 cron:

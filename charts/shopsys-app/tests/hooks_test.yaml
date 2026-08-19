@@ -114,8 +114,13 @@ tests:
             secretRef:
               name: app-secret-env
 
-  - it: renders no hook secret without secretEnv
+  - it: renders an empty scrub hook secret without secretEnv
     template: templates/hooks/secret-app-env-hook.yaml
     asserts:
       - hasDocuments:
-          count: 0
+          count: 1
+      - notExists:
+          path: stringData
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation
