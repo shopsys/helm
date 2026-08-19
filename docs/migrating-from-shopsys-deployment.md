@@ -39,6 +39,15 @@ Helm/Helmfile package.
      `meta.helm.sh/release-name` / `release-namespace` and label
      `app.kubernetes.io/managed-by: Helm` (see Helm docs on adoption).
 
+## Helm hook leftovers
+
+Hook resources are not part of the managed release: after a deploy (and after
+`helm uninstall`) the `migrate-application`/`post-deploy` Jobs, the `domains-urls-hook`
+ConfigMap and the `app-secret-env-hook` Secret remain in the namespace until the next
+deploy replaces them (`before-hook-creation`). This is intentional — the Jobs keep their
+logs readable. When decommissioning an environment, delete the namespace rather than just
+uninstalling the releases.
+
 ## Application requirements
 
 - The cron pod now drains itself: `phing -S cron-lock` and `phing -S cron-watch` are invoked
