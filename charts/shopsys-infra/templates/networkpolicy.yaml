@@ -1,0 +1,125 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- /* Namespace-wide policies live in the infra chart (installed first): the default
+       ingress deny, the redis/rabbitmq allows, the extra-ingress escape hatch and the
+       optional egress lockdown. The app chart adds the webserver/storefront allows. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    # application pods in this namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 6379
+    # prometheus scraping of the redis exporter
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.monitoringNamespace | nindent 12 }}
+      ports:
+        - port: 9121
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-rabbitmq
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: rabbitmq
+  policyTypes:
+    - Ingress
+  ingress:
+    # application pods in this namespace
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 5672
+    # management UI through the ingress controller
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressControllerNamespace | nindent 12 }}
+      ports:
+        - port: 15672
+    # prometheus scraping of the built-in exporter
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.monitoringNamespace | nindent 12 }}
+      ports:
+        - port: 15692
+{{- with .Values.networkPolicy.extraIngress }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-extra-ingress
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    {{- toYaml . | nindent 4 }}
+{{- end }}
+{{- if .Values.networkPolicy.egress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # DNS anywhere (cluster DNS location differs per cluster)
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # everything inside this namespace (redis, rabbitmq, webserver, storefront)
+    - to:
+        - podSelector: {}
+    # project-specific external services (PostgreSQL, Elasticsearch, S3, SMTP, the
+    # Kubernetes API for the cron-suspend hook, ...)
+    {{- with .Values.networkPolicy.egress.rules }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

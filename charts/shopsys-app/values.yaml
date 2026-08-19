@@ -75,6 +75,30 @@ serviceAccount:
   name: ""              # generated from the chart name when empty
   automountToken: false
 
+# Opt-in NetworkPolicies (shared values section - both charts render their part):
+# default-deny ingress for the whole namespace, allows for the chart workloads, and an
+# optional egress lockdown. Roll out on a dev environment first and verify that your CNI
+# enforces policies and that kubelet probes still pass.
+networkPolicy:
+  enabled: false
+  # Selector of the namespace running the ingress controller
+  ingressControllerNamespace:
+    matchLabels:
+      kubernetes.io/metadata.name: ingress-nginx
+  # Selector of the namespace running Prometheus (exporter scraping)
+  monitoringNamespace:
+    matchLabels:
+      kubernetes.io/metadata.name: monitoring
+  # Escape hatch: raw NetworkPolicyIngressRule list applied to all pods in the namespace
+  extraIngress: []
+  egress:
+    # When enabled, egress is denied namespace-wide except DNS, in-namespace traffic and
+    # the rules below. External services (PostgreSQL, Elasticsearch, S3, SMTP) and the
+    # Kubernetes API (needed by the cron-suspend hook) MUST be listed here.
+    enabled: false
+    # Raw NetworkPolicyEgressRule list
+    rules: []
+
 app:
   # Backend environment variables (webserver, cron, consumers, migration job, cron shell).
   # Values MUST be strings - quote values like "479411e7" in YAML.

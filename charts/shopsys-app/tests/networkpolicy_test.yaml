@@ -1,0 +1,47 @@
+suite: opt-in network policies (app)
+values:
+  - ./values/required.yaml
+templates:
+  - templates/networkpolicy.yaml
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: allows the ingress controller and in-namespace pods to reach the workloads
+    set:
+      networkPolicy:
+        enabled: true
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: spec.podSelector.matchLabels.app
+          value: webserver-php-fpm
+        documentIndex: 0
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8080
+        documentIndex: 0
+      - equal:
+          path: spec.ingress[0].from[0].namespaceSelector.matchLabels["kubernetes.io/metadata.name"]
+          value: ingress-nginx
+        documentIndex: 0
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 3000
+        documentIndex: 1
+
+  - it: honors a custom ingress-controller namespace selector
+    set:
+      networkPolicy:
+        enabled: true
+        ingressControllerNamespace:
+          matchLabels:
+            role: edge
+    asserts:
+      - equal:
+          path: spec.ingress[0].from[0].namespaceSelector.matchLabels.role
+          value: edge
+        documentIndex: 0

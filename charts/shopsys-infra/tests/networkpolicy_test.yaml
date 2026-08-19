@@ -1,0 +1,98 @@
+suite: opt-in network policies (infra)
+values:
+  - ./values/required.yaml
+templates:
+  - templates/networkpolicy.yaml
+tests:
+  - it: renders nothing by default
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the default ingress deny and the redis/rabbitmq allows
+    set:
+      networkPolicy:
+        enabled: true
+    asserts:
+      - hasDocuments:
+          count: 3
+      - equal:
+          path: metadata.name
+          value: default-deny-ingress
+        documentIndex: 0
+      - equal:
+          path: spec.podSelector
+          value: {}
+        documentIndex: 0
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 6379
+        documentIndex: 1
+      - equal:
+          path: spec.ingress[1].ports[0].port
+          value: 9121
+        documentIndex: 1
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 5672
+        documentIndex: 2
+      - equal:
+          path: spec.ingress[1].ports[0].port
+          value: 15672
+        documentIndex: 2
+
+  - it: keeps egress open unless explicitly locked down
+    set:
+      networkPolicy:
+        enabled: true
+    asserts:
+      - hasDocuments:
+          count: 3
+
+  - it: locks down egress with DNS, in-namespace and custom rules
+    set:
+      networkPolicy:
+        enabled: true
+        egress:
+          enabled: true
+          rules:
+            - to:
+                - ipBlock:
+                    cidr: 10.0.0.5/32
+              ports:
+                - port: 5432
+    asserts:
+      - hasDocuments:
+          count: 5
+      - equal:
+          path: metadata.name
+          value: default-deny-egress
+        documentIndex: 3
+      - equal:
+          path: spec.egress[0].ports[0].port
+          value: 53
+        documentIndex: 4
+      - equal:
+          path: spec.egress[2].to[0].ipBlock.cidr
+          value: 10.0.0.5/32
+        documentIndex: 4
+
+  - it: renders the extra-ingress escape hatch
+    set:
+      networkPolicy:
+        enabled: true
+        extraIngress:
+          - from:
+              - ipBlock:
+                  cidr: 192.168.0.0/16
+    asserts:
+      - hasDocuments:
+          count: 4
+      - equal:
+          path: metadata.name
+          value: allow-extra-ingress
+        documentIndex: 3
+      - equal:
+          path: spec.ingress[0].from[0].ipBlock.cidr
+          value: 192.168.0.0/16
+        documentIndex: 3
