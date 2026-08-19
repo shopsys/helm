@@ -121,6 +121,22 @@ per-domain website check (domain URLs + auth state are parsed from the rendered 
   `./values/required.yaml` (schema baseline). helm-unittest renders with
   `Release.Revision: 0` — set `release.revision` explicitly when asserting on it.
 
+## Project Skills
+
+Skills in `.claude/skills/` encode the working conventions — invoke them instead of
+improvising:
+
+- `helm-kubernetes-guidelines` — chart conventions, hook lifecycle, determinism rules and
+  template pitfalls; read before touching any template
+- `prepare-pr` — branch → implementation checklist → verification suite → commit/PR
+  conventions (incl. stacked PRs)
+- `watch-pr` — CI watching, Copilot review triage protocol (incl. suppressed comments;
+  never resolve threads yourself)
+- `implement-issue` — issue lifecycle: triage, scope-deviation records, closing retrospective
+- `create-issue` — backlog conventions: body structure, title prefixes, label taxonomy
+- `sync-upstream-deployment` — porting changes from the legacy shopsys/deployment package
+- `debug-deploy` — diagnosing failed deploys: phase identification, logs, recovery, don'ts
+
 ## Key Documentation
 
 - `docs/original-deployment.md` — how the legacy package works (the rewrite reference:
