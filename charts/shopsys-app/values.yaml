@@ -353,9 +353,12 @@ deploy:
       continuous: "-verbose db-migrations-count-with-maintenance build-deploy-part-2-db-dependent"
       firstDeploy: "cluster-first-deploy"
       firstDeployWithDemoData: "cluster-first-deploy db-fixtures-demo plugin-demo-data-load friendly-urls-generate domains-urls-replace elasticsearch-export"
+    # Hard bound for the migration Job (seconds); must exceed the longest migration
+    activeDeadlineSeconds: 1800
     resources: {}
   postDeploy:
     enabled: true
+    activeDeadlineSeconds: 600
     resources: {}
   hooks:
     # kubectlImage is the image used by the cron-suspend hook Job; pinned tag on purpose

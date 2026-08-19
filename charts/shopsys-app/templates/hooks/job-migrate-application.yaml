@@ -18,9 +18,9 @@ The command variant is selected by deploy.firstDeploy.*:
 {{- $command := printf "cd /var/www/html && ./phing %s" $targets.continuous }}
 {{- if .Values.deploy.firstDeploy.enabled }}
 {{- if .Values.deploy.firstDeploy.loadDemoData }}
-{{- $command = printf "cd /var/www/html && sleep 30 && ./phing %s" $targets.firstDeployWithDemoData }}
+{{- $command = printf "cd /var/www/html && ./phing %s" $targets.firstDeployWithDemoData }}
 {{- else }}
-{{- $command = printf "cd /var/www/html && sleep 30 && ./phing %s" $targets.firstDeploy }}
+{{- $command = printf "cd /var/www/html && ./phing %s" $targets.firstDeploy }}
 {{- end }}
 {{- end }}
 apiVersion: batch/v1
@@ -35,6 +35,9 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 0
+  # Bound the migration - a stuck Job otherwise blocks the deploy until the global
+  # helmfile timeout and stays running in the cluster
+  activeDeadlineSeconds: {{ .Values.deploy.migration.activeDeadlineSeconds }}
   template:
     spec:
       volumes:

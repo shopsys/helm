@@ -1519,6 +1519,9 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 0
+  # Bound the migration - a stuck Job otherwise blocks the deploy until the global
+  # helmfile timeout and stays running in the cluster
+  activeDeadlineSeconds: 1800
   template:
     spec:
       volumes:
@@ -1587,6 +1590,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 0
+  activeDeadlineSeconds: 600
   template:
     spec:
       volumes:

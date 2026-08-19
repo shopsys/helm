@@ -25,6 +25,9 @@ tests:
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: 'db-migrations-count-with-maintenance build-deploy-part-2-db-dependent'
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 1800
 
   - it: switches the command on first deploy
     template: templates/hooks/job-migrate-application.yaml
@@ -35,7 +38,7 @@ tests:
     asserts:
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
-          pattern: 'sleep 30 && \./phing cluster-first-deploy$'
+          pattern: 'cd /var/www/html && \./phing cluster-first-deploy$'
 
   - it: loads demo data on first deploy when requested
     template: templates/hooks/job-migrate-application.yaml
@@ -77,6 +80,9 @@ tests:
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: 'set -e'
+      - equal:
+          path: spec.activeDeadlineSeconds
+          value: 600
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: './phing maintenance-off\n'

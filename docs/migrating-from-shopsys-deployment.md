@@ -84,8 +84,11 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
    `domains-urls-hook` copy because pre-install hooks run before regular resources exist.
 8. **Namespace** is created by the wrapper/helmfile, not applied as a manifest. It is named
    `<project.name>-<environment>` (replaces the "PROJECT_NAME must contain a dash" rule).
-9. **`sleep 30`** in the first-deploy migration command is kept verbatim for parity even
-   though the infra release already guarantees readiness.
+9. **The legacy `sleep 30`** in the first-deploy migration command is removed — the
+   shopsys-infra release is installed with `wait: true` before the migration hook runs, so
+   readiness is guaranteed without a delay. The migration and post-deploy Jobs are
+   additionally bounded by `deploy.migration.activeDeadlineSeconds` (default 1800 s) and
+   `deploy.postDeploy.activeDeadlineSeconds` (default 600 s).
 10. **DISPLAY_FINAL_CONFIGURATION** prints one `helmfile template` output instead of two
     kustomize sections.
 11. **`orchestration/kubernetes/` file overrides and the composer `merge` step are gone** —
