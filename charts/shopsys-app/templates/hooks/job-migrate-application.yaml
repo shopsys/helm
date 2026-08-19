@@ -45,6 +45,13 @@ spec:
         - name: migrate-application
           image: {{ include "shopsys.image" .Values.webserver.image | quote }}
           command: ["sh", "-c", {{ $command | quote }}]
+          {{- /* Hook-scoped Secret copy - the regular app-secret-env does not exist yet
+                 on the first install and is not yet updated during pre-upgrade */}}
+          {{- if .Values.app.secretEnv }}
+          envFrom:
+            - secretRef:
+                name: app-secret-env-hook
+          {{- end }}
           env:
             {{- include "shopsys.appEnv" (dict "root" $) | nindent 12 }}
           {{- with .Values.deploy.migration.resources }}

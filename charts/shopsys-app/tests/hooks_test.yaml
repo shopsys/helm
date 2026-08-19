@@ -5,6 +5,7 @@ templates:
   - templates/hooks/job-migrate-application.yaml
   - templates/hooks/job-cron-suspend.yaml
   - templates/hooks/job-post-deploy.yaml
+  - templates/hooks/secret-app-env-hook.yaml
 tests:
   - it: runs the migration before install and upgrade, keeps the job for logs
     template: templates/hooks/job-migrate-application.yaml
@@ -85,3 +86,41 @@ tests:
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: 'build-deploy-part-3-non-blocking \|\| echo'
+
+  - it: gives the migration job a hook-scoped secret env copy
+    set:
+      app:
+        secretEnv:
+          DATABASE_PASSWORD: "s3cret"
+    asserts:
+      - template: templates/hooks/secret-app-env-hook.yaml
+        equal:
+          path: metadata.annotations["helm.sh/hook-weight"]
+          value: "5"
+      - template: templates/hooks/secret-app-env-hook.yaml
+        equal:
+          path: stringData.DATABASE_PASSWORD
+          value: "s3cret"
+      - template: templates/hooks/job-migrate-application.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: app-secret-env-hook
+      - template: templates/hooks/job-post-deploy.yaml
+        contains:
+          path: spec.template.spec.containers[0].envFrom
+          content:
+            secretRef:
+              name: app-secret-env
+
+  - it: renders an empty scrub hook secret without secretEnv
+    template: templates/hooks/secret-app-env-hook.yaml
+    asserts:
+      - hasDocuments:
+          count: 1
+      - notExists:
+          path: stringData
+      - equal:
+          path: metadata.annotations["helm.sh/hook-delete-policy"]
+          value: before-hook-creation

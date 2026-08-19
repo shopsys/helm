@@ -15,6 +15,9 @@ spec:
     metadata:
       annotations:
         {{- include "shopsys.podAnnotations" (dict "root" $ "app" "storefront" "logging" "false" "component" .Values.storefront) | nindent 8 }}
+        {{- if .Values.storefront.secretEnv }}
+        checksum/storefront-secret-env: {{ toYaml .Values.storefront.secretEnv | sha256sum }}
+        {{- end }}
       labels:
         app: storefront
         {{- with .Values.storefront.podLabels }}
@@ -32,6 +35,11 @@ spec:
             - name: storefront
               containerPort: 3000
               protocol: TCP
+          {{- if .Values.storefront.secretEnv }}
+          envFrom:
+            - secretRef:
+                name: storefront-secret-env
+          {{- end }}
           env:
             {{- include "shopsys.envBlock" .Values.storefront.env | nindent 12 }}
             {{- range $i, $d := .Values.domains }}

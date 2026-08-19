@@ -6,6 +6,7 @@ templates:
   - templates/statefulset-rabbitmq.yaml
   - templates/ingress-rabbitmq.yaml
   - templates/rbac-deploy-hooks.yaml
+  - templates/secret-rabbitmq.yaml
 tests:
   - it: runs redis as the first container with the exporter sidecar and health probes
     template: templates/deployment-redis.yaml
@@ -38,7 +39,10 @@ tests:
           path: spec.template.spec.containers[0].env
           content:
             name: RABBITMQ_DEFAULT_USER
-            value: "admin"
+            valueFrom:
+              secretKeyRef:
+                name: rabbitmq-credentials
+                key: user
 
   - it: derives the management hostname from the first domain
     template: templates/ingress-rabbitmq.yaml
@@ -73,3 +77,18 @@ tests:
     asserts:
       - hasDocuments:
           count: 3
+
+  - it: stores rabbitmq credentials in a secret
+    template: templates/secret-rabbitmq.yaml
+    set:
+      rabbitmq:
+        auth:
+          user: admin
+          password: secret
+    asserts:
+      - equal:
+          path: stringData.user
+          value: admin
+      - equal:
+          path: stringData.password
+          value: secret

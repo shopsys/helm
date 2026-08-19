@@ -92,6 +92,9 @@ rabbitmq:
     repository: rabbitmq
     tag: 4.1-management-alpine
     pullPolicy: ""
+  # Bootstrap-only credentials (RABBITMQ_DEFAULT_USER/PASS): RabbitMQ reads them only when
+  # initializing an empty /var/lib/rabbitmq. Changing them later updates the Secret but NOT
+  # the actual broker user - rotate manually with `rabbitmqctl change_password`.
   auth:
     user: ""       # sensitive - provide via environment interpolation
     password: ""   # sensitive - provide via environment interpolation

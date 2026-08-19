@@ -39,9 +39,15 @@ spec:
               protocol: TCP
           env:
             - name: RABBITMQ_DEFAULT_USER
-              value: {{ .Values.rabbitmq.auth.user | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: user
             - name: RABBITMQ_DEFAULT_PASS
-              value: {{ .Values.rabbitmq.auth.password | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-credentials
+                  key: password
             {{- with .Values.rabbitmq.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
