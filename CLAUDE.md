@@ -121,6 +121,18 @@ per-domain website check (domain URLs + auth state are parsed from the rendered 
   `./values/required.yaml` (schema baseline). helm-unittest renders with
   `Release.Revision: 0` — set `release.revision` explicitly when asserting on it.
 
+## Project Skills
+
+Three skills in `.claude/skills/` encode the working conventions — invoke them instead of
+improvising:
+
+- `prepare-pr` — branch → implementation checklist → verification suite → commit/PR
+  conventions (incl. stacked PRs)
+- `watch-pr` — CI watching, Copilot review triage protocol (incl. suppressed comments;
+  never resolve threads yourself)
+- `helm-kubernetes-guidelines` — chart conventions, hook lifecycle, determinism rules and
+  template pitfalls; read before touching any template
+
 ## Key Documentation
 
 - `docs/original-deployment.md` — how the legacy package works (the rewrite reference:
