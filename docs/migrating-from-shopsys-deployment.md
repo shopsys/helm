@@ -136,3 +136,11 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     via `webserver.pdb.enabled` / `storefront.pdb.enabled`. `topologySpreadConstraints`
     is also available as a standard component key (empty by default — the legacy
     anti-affinity defaults are kept untouched).
+23. **Dedicated ServiceAccounts**: workload pods previously ran under the namespace
+    `default` ServiceAccount with its API token mounted. Each chart now creates its own
+    ServiceAccount (`shopsys-app` / `shopsys-infra`) with
+    `automountServiceAccountToken: false` — none of the workloads talk to the Kubernetes
+    API. The hook Jobs are unchanged: `cron-suspend` keeps the `deploy-hooks` SA (needs the
+    API), and the migration/post-deploy Jobs stay on the default SA (a `pre-install` hook
+    cannot reference the chart SA, which does not exist yet) but no longer mount its token.
+    Configure via `serviceAccount: {create, name, automountToken}`.

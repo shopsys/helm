@@ -65,6 +65,12 @@ security:
 registry:                    # image pull secret; credentials sensitive → env vars
   existingSecret: ""         # OR reference an externally managed pull secret
 
+serviceAccount:              # per-chart SA the workload pods run under (no API token mounted)
+  create: true
+  name: ""                   # empty = chart name per chart; leave empty (shared values -
+                             #   an explicit name would collide between the two releases)
+  automountToken: false
+
 app:                         # shared backend configuration
   env: {}                    # non-sensitive backend env vars (webserver, cron, consumers, migration)
   secretEnv: {}              # sensitive backend env vars → app-secret-env Secret + envFrom;

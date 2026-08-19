@@ -248,10 +248,22 @@ checksum/php-fpm: {{ printf "%s%s" ($root.Values.webserver.phpFpm.config | defau
 {{- end }}
 {{- end }}
 
+{{/* Name of the chart-scoped ServiceAccount workload pods run under.
+     Defaults to the chart name; with create=false an explicitly named (externally
+     managed) ServiceAccount is referenced, falling back to "default". */}}
+{{- define "shopsys.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- .Values.serviceAccount.name | default .Chart.Name -}}
+{{- else -}}
+{{- .Values.serviceAccount.name | default "default" -}}
+{{- end -}}
+{{- end }}
+
 {{/* Standard scheduling/security pod fields shared by every component.
      ctx: (dict "root" $ "component" <component values>)
      Rendered at zero indent — use `| nindent N` at the call site. */}}
 {{- define "shopsys.podSettings" -}}
+serviceAccountName: {{ include "shopsys.serviceAccountName" .root }}
 {{- with .component.nodeSelector }}
 nodeSelector:
 {{ toYaml . | indent 2 }}

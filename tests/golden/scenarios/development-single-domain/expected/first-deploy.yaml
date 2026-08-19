@@ -13,6 +13,19 @@ metadata:
     helm.sh/chart: shopsys-infra-1.0.0
 
 ---
+# Source: shopsys-infra/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shopsys-infra
+  labels:
+    app.kubernetes.io/name: shopsys-infra
+    app.kubernetes.io/instance: shopsys-infra
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-infra-1.0.0
+automountServiceAccountToken: false
+
+---
 # Source: shopsys-infra/templates/secret-rabbitmq.yaml
 apiVersion: v1
 kind: Secret
@@ -201,7 +214,7 @@ spec:
       labels:
         app: redis
     spec:
-      
+      serviceAccountName: shopsys-infra
       volumes:
         - name: health
           configMap:
@@ -284,7 +297,7 @@ spec:
       labels:
         app: rabbitmq
     spec:
-      
+      serviceAccountName: shopsys-infra
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -407,6 +420,19 @@ spec:
   selector:
     matchLabels:
       app: webserver-php-fpm
+
+---
+# Source: shopsys-app/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: shopsys-app
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+automountServiceAccountToken: false
 
 ---
 # Source: shopsys-app/templates/secret-app-env.yaml
@@ -971,7 +997,7 @@ spec:
         # Forces a fresh cron pod on every deploy (legacy `date` label)
         date: "1234567890"
     spec:
-      
+      serviceAccountName: shopsys-app
       tolerations:
         - effect: NoSchedule
           key: workload
@@ -1107,7 +1133,7 @@ spec:
       labels:
         app: storefront
     spec:
-      
+      serviceAccountName: shopsys-app
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -1203,7 +1229,7 @@ spec:
       labels:
         app: webserver-php-fpm
     spec:
-      
+      serviceAccountName: shopsys-app
       affinity:
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -1563,6 +1589,10 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      # Runs under the namespace default SA (as a pre-install hook it cannot reference the
+      # chart ServiceAccount, which does not exist yet); it never talks to the API, so the
+      # token is not mounted.
+      automountServiceAccountToken: false
       volumes:
         - name: domains-urls
           configMap:
@@ -1631,6 +1661,9 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      # Runs under the namespace default SA (kept consistent with the migration hook);
+      # it never talks to the API, so the token is not mounted.
+      automountServiceAccountToken: false
       volumes:
         - name: domains-urls
           configMap:

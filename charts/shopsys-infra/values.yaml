@@ -31,6 +31,13 @@ registry:
   # when set, pods reference this name instead of "dockerregistry".
   existingSecret: ""
 
+# ServiceAccount the redis/rabbitmq pods run under; see the app chart for the shared-values
+# caveat (leave `name` empty - it defaults to the chart name per chart).
+serviceAccount:
+  create: true
+  name: ""
+  automountToken: false
+
 redis:
   enabled: true
   image:

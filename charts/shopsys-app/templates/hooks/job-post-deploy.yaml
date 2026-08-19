@@ -19,6 +19,9 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      # Runs under the namespace default SA (kept consistent with the migration hook);
+      # it never talks to the API, so the token is not mounted.
+      automountServiceAccountToken: false
       volumes:
         - name: domains-urls
           configMap:
