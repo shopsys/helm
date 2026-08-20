@@ -76,7 +76,7 @@ Both are the **same** `helmfile apply`. On the very first deploy:
 | 9 kustomize variant selection | `deploy.firstDeploy.enabled/loadDemoData` values (set from `FIRST_DEPLOY` env by `runtime.yaml.gotmpl`) |
 | 10 DISPLAY_FINAL_CONFIGURATION | wrapper: `helmfile template` in a collapsible section |
 | 11 apply migrate batch | infra release (redis/rabbitmq) + migrate hook Job |
-| 12 wait for the job | `helm --wait-for-jobs` (bounded by `DEPLOY_TIMEOUT`, default 45 min — the legacy loop was unbounded) |
+| 12 wait for the job | `helm --wait-for-jobs` (bounded by `DEPLOY_TIMEOUT`, default 90 min — the legacy loop was unbounded) |
 | 13 migration failure recovery | wrapper failure branch (scale cron back to 1, maintenance-off, logs, slack, exit 1) |
 | 14 apply cron | regular resource in the main apply; the `date` pod label (from `deploy.timestamp`) forces a new pod |
 | 15+18 HPA delete/re-apply dance | HPAs are permanent; the Deployments omit `replicas` when autoscaling is enabled, so there is nothing to fight (and no transient scale-down) |

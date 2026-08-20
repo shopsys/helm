@@ -1521,7 +1521,7 @@ spec:
   backoffLimit: 0
   # Bound the migration - a stuck Job otherwise blocks the deploy until the global
   # helmfile timeout and stays running in the cluster
-  activeDeadlineSeconds: 1800
+  activeDeadlineSeconds: 3600
   template:
     spec:
       volumes:

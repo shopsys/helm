@@ -70,7 +70,7 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
    `ENABLE_AUTOSCALING` split into independent `webserver.autoscaling.enabled` and
    `storefront.autoscaling.enabled`.
 3. **Bounded waits**: the legacy migration polling loop and cron-watch wait were unbounded;
-   now `DEPLOY_TIMEOUT` (default 45 min) bounds the apply and
+   now `DEPLOY_TIMEOUT` (default 90 min) bounds the apply and
    `cron.terminationGracePeriodSeconds` (default 3600 s) bounds the cron drain.
 4. **Cron locking** happens inside the terminating pod (preStop) instead of `kubectl exec`
    into a pod that stayed alive through the migration. Net effect is identical: no crons run
@@ -89,7 +89,7 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
    (Redis readiness is probe-backed; RabbitMQ has no default readinessProbe, so the wait
    guarantees a Running broker container, not yet an accepting broker). The migration and
    post-deploy Jobs are additionally bounded by `deploy.migration.activeDeadlineSeconds`
-   (default 1800 s — first deploys with demo data may need much more, see
+   (default 3600 s — first deploys with demo data may need much more, see
    [values.md](values.md)) and `deploy.postDeploy.activeDeadlineSeconds` (default 600 s).
    When a deadline fires, the Job controller deletes the running pod — the Job fails as
    `DeadlineExceeded` (the wrapper's recovery path still triggers), but the pod logs are

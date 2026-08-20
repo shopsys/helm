@@ -27,7 +27,7 @@ tests:
           pattern: 'db-migrations-count-with-maintenance build-deploy-part-2-db-dependent'
       - equal:
           path: spec.activeDeadlineSeconds
-          value: 1800
+          value: 3600
 
   - it: switches the command on first deploy
     template: templates/hooks/job-migrate-application.yaml
