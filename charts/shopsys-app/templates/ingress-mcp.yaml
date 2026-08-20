@@ -27,7 +27,6 @@ metadata:
   labels:
     {{- include "shopsys.labels" $ | nindent 4 }}
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.proxyBodySize }}
     {{- with .Values.security.mcp.ipWhitelist }}
     nginx.ingress.kubernetes.io/whitelist-source-range: {{ join "," . | quote }}

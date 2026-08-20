@@ -72,7 +72,9 @@ app:                         # shared backend configuration
   envDefaults: { MAILER_FORCE_WHITELIST: "false" }
   domainsUrls: { filename, mountPath }
   adminUrl: admin
-  s3Endpoint: ""
+  s3Endpoint: ""             # REQUIRED by the default nginx vhost (it proxies /content/* to S3)
+                             #   — an empty value fails the render; projects with their own
+                             #   webserver.nginx.projectConfig may leave it empty
 
 webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers
 storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret)
@@ -90,6 +92,13 @@ deploy:
 
 extraManifests: []           # raw manifests (rendered through tpl) — escape hatch
 ```
+
+**Pull secret and the infra release:** the `dockerregistry` Secret is created by the
+**shopsys-app** release, but **shopsys-infra** installs before it (`wait: true`) — private
+redis/rabbitmq images would therefore leave the very first deploy stuck in
+`ImagePullBackOff`. The default infra images are public, so this only matters if you host
+them privately: pre-create the pull secret out of band and point `registry.existingSecret`
+at it.
 
 **Important:** `app.env`, `app.secretEnv`, `app.envDefaults`, `storefront.env` and
 `storefront.secretEnv` values must be **strings** (quote everything:

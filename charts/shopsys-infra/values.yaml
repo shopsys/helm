@@ -23,6 +23,11 @@ security:
     enabled: false
 
 # Secrets referenced by pods are created by the shopsys-app release.
+# NOTE: this release installs BEFORE shopsys-app (with wait: true), so the "dockerregistry"
+# Secret does not exist yet on the very first deploy. The default redis/rabbitmq images are
+# public, so nothing pulls through it; if your project uses PRIVATE infra images, pre-create
+# the pull secret out of band and set registry.existingSecret to its name - otherwise the
+# first deploy hangs in ImagePullBackOff.
 imagePullSecrets:
   - dockerregistry
 

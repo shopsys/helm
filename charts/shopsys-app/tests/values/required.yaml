@@ -3,3 +3,6 @@ project:
   environment: test
 domains:
   - hostname: www.example.com
+app:
+  # required by the default nginx vhost (content images are proxied to S3)
+  s3Endpoint: https://s3.example.com

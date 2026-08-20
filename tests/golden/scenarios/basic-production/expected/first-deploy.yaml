@@ -350,7 +350,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: shopsys-infra-1.0.0
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
     nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8"
@@ -1183,6 +1182,7 @@ metadata:
     app.kubernetes.io/instance: shopsys-app
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: shopsys-app-1.0.0
+    app: storefront
 spec:
   selector:
     matchLabels:
@@ -1537,7 +1537,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: shopsys-app-1.0.0
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
     nginx.ingress.kubernetes.io/configuration-snippet: "if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^(?!www\\.)(?<domain>.+)$) { return 308 https://www.$domain$request_uri; }"
@@ -1573,7 +1572,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: shopsys-app-1.0.0
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: letsencrypt-prod
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
     nginx.ingress.kubernetes.io/configuration-snippet: "if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^(?!www\\.)(?<domain>.+)$) { return 308 https://www.$domain$request_uri; }"
@@ -1609,7 +1607,6 @@ metadata:
     app.kubernetes.io/managed-by: Helm
     helm.sh/chart: shopsys-app-1.0.0
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/proxy-body-size: 32m
     nginx.ingress.kubernetes.io/whitelist-source-range: "203.0.113.0/24,198.51.100.10/32"
 spec:
@@ -1717,7 +1714,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: cron-suspend
-          image: "rancher/kubectl:v1.33.13"
+          image: "alpine/k8s:1.33.13"
           command:
             - /bin/sh
             - -c

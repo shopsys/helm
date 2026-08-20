@@ -36,6 +36,10 @@ tests:
         equal:
           path: spec.tls[0].secretName
           value: tls-example-sk
+      # the unprefixed legacy annotation is a no-op for ingress-nginx and is not rendered
+      - documentIndex: 0
+        notExists:
+          path: metadata.annotations["ingress.kubernetes.io/ssl-redirect"]
 
   - it: supports path-based domains
     set:

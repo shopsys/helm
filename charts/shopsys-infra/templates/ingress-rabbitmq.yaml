@@ -10,7 +10,6 @@ metadata:
   labels:
     {{- include "shopsys.labels" $ | nindent 4 }}
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: {{ .Values.ingress.clusterIssuer }}
     nginx.ingress.kubernetes.io/proxy-body-size: {{ .Values.ingress.proxyBodySize }}
     {{- with .Values.rabbitmq.management.ipWhitelist }}

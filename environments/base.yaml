@@ -19,6 +19,10 @@ security:
 # Backend application environment variables shared by all environments.
 # Values must be strings - quote numbers and booleans.
 app:
+  # Base URL of the S3-compatible storage (legacy S3_ENDPOINT). The default nginx vhost
+  # proxies /content/* there, so it is REQUIRED unless the project supplies its own
+  # webserver.nginx.projectConfig - rendering fails otherwise.
+  s3Endpoint: https://s3.example.com
   env: {}
 
 cron:
