@@ -29,7 +29,7 @@ Every workload component (`webserver`, `storefront`, `cron`, `consumers.defaults
 | `extraEnv` | extra env entries (raw list, supports `valueFrom`) |
 | `extraVolumes` / `extraVolumeMounts` | additional volumes |
 | `livenessProbe` / `readinessProbe` | probe overrides |
-| `securityContext` / `podSecurityContext` | security contexts |
+| `securityContext` / `podSecurityContext` | security contexts (hardening defaults ship per component: seccomp `RuntimeDefault` + `allowPrivilegeEscalation: false` everywhere except cron; nginx and redis additionally run non-root with a read-only root filesystem — see the deviations list) |
 | `terminationGracePeriodSeconds`, `lifecycle` | shutdown behavior |
 
 `topologySpreadConstraints` is a raw passthrough — supply complete constraints. Prefer
@@ -105,7 +105,7 @@ deploy:
   firstDeploy: { enabled: false, loadDemoData: false }
   migration: { enabled, targets: {continuous, firstDeploy, firstDeployWithDemoData}, resources }
   postDeploy: { enabled, resources }
-  hooks: { kubectlImage, serviceAccountName }
+  hooks: { kubectlImage, serviceAccountName, podSecurityContext, securityContext }
 
 extraManifests: []           # raw manifests (rendered through tpl) — escape hatch
 ```

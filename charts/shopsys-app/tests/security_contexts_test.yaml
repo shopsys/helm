@@ -1,0 +1,175 @@
+suite: default security contexts
+values:
+  - ./values/required.yaml
+templates:
+  - templates/deployment-webserver-php-fpm.yaml
+  - templates/deployment-storefront.yaml
+  - templates/deployment-consumer.yaml
+  - templates/deployment-cron.yaml
+  - templates/hooks/job-migrate-application.yaml
+  - templates/hooks/job-post-deploy.yaml
+  - templates/hooks/job-cron-suspend.yaml
+tests:
+  - it: runs nginx unprivileged with a read-only root filesystem
+    template: templates/deployment-webserver-php-fpm.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 101
+            runAsGroup: 101
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: nginx-cache
+            mountPath: /var/cache/nginx
+      - contains:
+          path: spec.template.spec.containers[1].volumeMounts
+          content:
+            name: nginx-tmp
+            mountPath: /tmp
+
+  - it: probes the nginx health server on the unprivileged port
+    template: templates/deployment-webserver-php-fpm.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.port
+          value: 8081
+      - equal:
+          path: spec.template.spec.containers[1].readinessProbe.httpGet.port
+          value: 8081
+
+  - it: honors a custom nginx health port in probes
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      webserver:
+        nginx:
+          healthPort: 9999
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].livenessProbe.httpGet.port
+          value: 9999
+
+  - it: applies the seccomp profile and php-fpm container hardening
+    template: templates/deployment-webserver-php-fpm.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - equal:
+          path: spec.template.spec.initContainers[0].securityContext.allowPrivilegeEscalation
+          value: false
+
+  - it: hardens the storefront pod and container
+    template: templates/deployment-storefront.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+
+  - it: hardens consumer pods
+    template: templates/deployment-consumer.yaml
+    set:
+      consumers:
+        instances:
+          - name: email
+            transports: email_transport
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+
+  - it: leaves the cron container running as root (out of scope)
+    template: templates/deployment-cron.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsUser
+          value: 0
+      - notExists:
+          path: spec.template.spec.securityContext.seccompProfile
+
+  - it: hardens the migration hook without breaking the app image
+    template: templates/hooks/job-migrate-application.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext.capabilities
+
+  - it: hardens the post-deploy hook without breaking the app image
+    template: templates/hooks/job-post-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext.capabilities
+
+  - it: honors hook security context overrides
+    templates:
+      - templates/hooks/job-migrate-application.yaml
+      - templates/hooks/job-post-deploy.yaml
+    set:
+      deploy:
+        hooks:
+          podSecurityContext: null
+          securityContext:
+            allowPrivilegeEscalation: true
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: true
+
+  - it: drops all capabilities in the kubectl hook
+    template: templates/hooks/job-cron-suspend.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.capabilities.drop[0]
+          value: ALL
+
+  - it: allows reverting nginx to root via values
+    template: templates/deployment-webserver-php-fpm.yaml
+    set:
+      webserver:
+        nginx:
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            readOnlyRootFilesystem: false
+            # Nulling capabilities is required: maps deep-merge, so the default
+            # "drop ALL" would survive and root nginx CrashLoops without CAP_CHOWN
+            # (chown of the temp dirs) and CAP_SETUID/SETGID (spawning workers).
+            capabilities: null
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.runAsUser
+          value: 0
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.readOnlyRootFilesystem
+          value: false
+      - notExists:
+          path: spec.template.spec.containers[1].securityContext.capabilities

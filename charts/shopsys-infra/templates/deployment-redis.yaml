@@ -94,6 +94,10 @@ spec:
         - name: redis-exporter
           image: {{ include "shopsys.image" .Values.redis.exporter.image | quote }}
           imagePullPolicy: {{ .Values.redis.exporter.image.pullPolicy | default "IfNotPresent" }}
+          {{- with .Values.redis.exporter.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: exporter
               containerPort: 9121

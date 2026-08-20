@@ -151,3 +151,39 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     API), and the migration/post-deploy Jobs stay on the default SA (a `pre-install` hook
     cannot reference the chart SA, which does not exist yet) but no longer mount its token.
     Configure via `serviceAccount: {create, name, automountToken}`.
+24. **Default security contexts**: the legacy package ran everything with cluster defaults.
+    The chart now ships hardening defaults, overridable per component through the existing
+    `securityContext`/`podSecurityContext` keys:
+    - all workload pods (except cron): `seccompProfile: RuntimeDefault`; all containers:
+      `allowPrivilegeEscalation: false`,
+    - **nginx runs unprivileged** (uid 101, no capabilities, read-only root filesystem with
+      emptyDirs over `/var/cache/nginx` and `/tmp`): the chart-shipped `nginx.conf` moved
+      the pid file to `/tmp/nginx.pid`, dropped the `user` directive, and the **health
+      listener moved from port 80 to `webserver.nginx.healthPort` (default 8081)** — update
+      any custom `webserver.nginx.config`/`projectConfig` accordingly,
+    - **redis + exporter run unprivileged** (uid 999, no capabilities, read-only root
+      filesystem — safe because persistence is disabled),
+    - `runAsNonRoot` is NOT defaulted for the application images (webserver php-fpm,
+      storefront, consumers, hook Jobs) — their user is project-specific; enable it per
+      project after verifying the image. RabbitMQ keeps its user (existing PVC data
+      ownership); the cron container still runs crond as root (tracked separately).
+    - reverting nginx to root (e.g. for a custom config that still binds port 80) must
+      also null out the capabilities — maps deep-merge on override, so the default
+      `drop: ["ALL"]` would survive and root nginx CrashLoops without `CAP_CHOWN`/
+      `CAP_SETUID`:
+
+      ```yaml
+      webserver:
+        nginx:
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            readOnlyRootFilesystem: false
+            capabilities: null
+      ```
+    - these defaults alone do NOT make the pods pass the Pod Security Admission
+      `restricted` profile — that additionally requires `runAsNonRoot` and
+      `capabilities: {drop: ["ALL"]}` on every container, which for the application
+      images must be enabled per project. Verify on a real cluster before enforcing
+      `restricted` on the namespace.

@@ -94,6 +94,36 @@ tests:
           path: stringData.password
           value: secret
 
+  - it: runs redis fully unprivileged with a read-only root filesystem
+    template: templates/deployment-redis.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext
+          value:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem
+          value: true
+      - equal:
+          path: spec.template.spec.containers[1].securityContext.capabilities.drop[0]
+          value: ALL
+
+  - it: hardens rabbitmq without switching its user
+    template: templates/statefulset-rabbitmq.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - notExists:
+          path: spec.template.spec.securityContext.runAsNonRoot
+
   - it: runs infra pods under the chart ServiceAccount without token automount
     template: templates/serviceaccount.yaml
     asserts:

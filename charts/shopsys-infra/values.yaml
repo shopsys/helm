@@ -80,14 +80,31 @@ redis:
       requests:
         cpu: 10m
         memory: 128Mi
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+      readOnlyRootFilesystem: true
   podAnnotations: {}
   podLabels: {}
   nodeSelector: {}
   tolerations: []
   affinity: {}
   topologySpreadConstraints: []
-  podSecurityContext: {}
-  securityContext: {}
+  # Redis runs fully unprivileged: the stock image's redis user (uid 999, gid 1000), a
+  # read-only root filesystem (safe - persistence is disabled, nothing is written to disk)
+  # and no capabilities. The pod-level user also applies to the exporter (static binary).
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    readOnlyRootFilesystem: true
   extraEnv: []
   extraVolumes: []
   extraVolumeMounts: []
@@ -136,8 +153,14 @@ rabbitmq:
                   values:
                     - rabbitmq
   topologySpreadConstraints: []
-  podSecurityContext: {}
-  securityContext: {}
+  # runAsNonRoot is intentionally NOT defaulted for RabbitMQ: existing installs have PVC
+  # data owned by the user the broker ran under, and the entrypoint needs root to fix
+  # ownership - switching the user on a populated volume would break the broker.
+  podSecurityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
   extraEnv: []
   extraVolumes: []
   extraVolumeMounts: []

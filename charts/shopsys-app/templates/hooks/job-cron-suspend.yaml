@@ -21,9 +21,16 @@ spec:
     spec:
       serviceAccountName: {{ .Values.deploy.hooks.serviceAccountName }}
       restartPolicy: Never
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: cron-suspend
           image: {{ .Values.deploy.hooks.kubectlImage | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           command:
             - /bin/sh
             - -c
