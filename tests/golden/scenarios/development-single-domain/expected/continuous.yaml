@@ -215,6 +215,7 @@ spec:
         app: redis
     spec:
       serviceAccountName: shopsys-infra
+      automountServiceAccountToken: false
       securityContext:
         runAsGroup: 1000
         runAsNonRoot: true
@@ -316,6 +317,7 @@ spec:
         app: rabbitmq
     spec:
       serviceAccountName: shopsys-infra
+      automountServiceAccountToken: false
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -1024,6 +1026,7 @@ spec:
         date: "1234567890"
     spec:
       serviceAccountName: shopsys-app
+      automountServiceAccountToken: false
       tolerations:
         - effect: NoSchedule
           key: workload
@@ -1160,6 +1163,7 @@ spec:
         app: storefront
     spec:
       serviceAccountName: shopsys-app
+      automountServiceAccountToken: false
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -1261,6 +1265,7 @@ spec:
         app: webserver-php-fpm
     spec:
       serviceAccountName: shopsys-app
+      automountServiceAccountToken: false
       affinity:
         podAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:

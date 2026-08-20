@@ -22,9 +22,10 @@ spec:
       # Runs under the namespace default SA (kept consistent with the migration hook);
       # it never talks to the API, so the token is not mounted.
       automountServiceAccountToken: false
+      {{- with .Values.deploy.hooks.podSecurityContext }}
       securityContext:
-        seccompProfile:
-          type: RuntimeDefault
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       volumes:
         - name: domains-urls
           configMap:
@@ -32,8 +33,10 @@ spec:
       containers:
         - name: post-deploy
           image: {{ include "shopsys.image" .Values.webserver.image | quote }}
+          {{- with .Values.deploy.hooks.securityContext }}
           securityContext:
-            allowPrivilegeEscalation: false
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           command:
             - sh
             - -c

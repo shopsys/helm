@@ -7,6 +7,7 @@ templates:
   - templates/deployment-consumer.yaml
   - templates/deployment-cron.yaml
   - templates/hooks/job-migrate-application.yaml
+  - templates/hooks/job-post-deploy.yaml
   - templates/hooks/job-cron-suspend.yaml
 tests:
   - it: runs nginx unprivileged with a read-only root filesystem
@@ -113,6 +114,35 @@ tests:
       - notExists:
           path: spec.template.spec.containers[0].securityContext.capabilities
 
+  - it: hardens the post-deploy hook without breaking the app image
+    template: templates/hooks/job-post-deploy.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.securityContext.seccompProfile.type
+          value: RuntimeDefault
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: false
+      - notExists:
+          path: spec.template.spec.containers[0].securityContext.capabilities
+
+  - it: honors hook security context overrides
+    templates:
+      - templates/hooks/job-migrate-application.yaml
+      - templates/hooks/job-post-deploy.yaml
+    set:
+      deploy:
+        hooks:
+          podSecurityContext: null
+          securityContext:
+            allowPrivilegeEscalation: true
+    asserts:
+      - notExists:
+          path: spec.template.spec.securityContext
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation
+          value: true
+
   - it: drops all capabilities in the kubectl hook
     template: templates/hooks/job-cron-suspend.yaml
     asserts:
@@ -130,6 +160,10 @@ tests:
             runAsUser: 0
             runAsGroup: 0
             readOnlyRootFilesystem: false
+            # Nulling capabilities is required: maps deep-merge, so the default
+            # "drop ALL" would survive and root nginx CrashLoops without CAP_CHOWN
+            # (chown of the temp dirs) and CAP_SETUID/SETGID (spawning workers).
+            capabilities: null
     asserts:
       - equal:
           path: spec.template.spec.containers[1].securityContext.runAsUser
@@ -137,3 +171,5 @@ tests:
       - equal:
           path: spec.template.spec.containers[1].securityContext.readOnlyRootFilesystem
           value: false
+      - notExists:
+          path: spec.template.spec.containers[1].securityContext.capabilities
