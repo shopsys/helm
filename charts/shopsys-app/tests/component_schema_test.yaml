@@ -135,6 +135,18 @@ tests:
           value: "500m"
         documentIndex: 1
 
+  - it: lets an instance opt out of resources entirely (legacy BestEffort)
+    template: templates/deployment-consumer.yaml
+    set:
+      consumers:
+        instances:
+          - name: besteffort
+            transports: besteffort_transport
+            resources: null
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources
+
   - it: propagates pod annotations and labels
     template: templates/deployment-webserver-php-fpm.yaml
     set:

@@ -102,6 +102,13 @@ entries take precedence over `envFrom` in Kubernetes — never define the same k
 Lists (e.g. `security.whitelistIps`, `domains`) **replace** the base value when overridden by
 an environment file — they are not merged. Maps merge deeply.
 
+To restore the legacy BestEffort behavior (no requests/limits), set the component's
+`resources: null` — for cron via `cron.resources: null`, for a single consumer instance via
+`resources: null` on that instance. **Per consumer instance, null the whole `resources` map
+(or replace it), never a nested key**: a nested null such as
+`resources: {limits: {memory: null}}` survives the per-instance merge and renders a literal
+`memory: null`, which is rejected by the Kubernetes API.
+
 ## Legacy env var → values mapping
 
 | Legacy env var | New location |
