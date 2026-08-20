@@ -1573,6 +1573,9 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 0
+  # Bound the migration - a stuck Job otherwise blocks the deploy until the global
+  # helmfile timeout and stays running in the cluster
+  activeDeadlineSeconds: 1800
   template:
     spec:
       volumes:
@@ -1582,7 +1585,7 @@ spec:
       containers:
         - name: migrate-application
           image: "v1.0.0"
-          command: ["sh", "-c", "cd /var/www/html && sleep 30 && ./phing cluster-first-deploy db-fixtures-demo plugin-demo-data-load friendly-urls-generate domains-urls-replace elasticsearch-export"]
+          command: ["sh", "-c", "cd /var/www/html && ./phing cluster-first-deploy db-fixtures-demo plugin-demo-data-load friendly-urls-generate domains-urls-replace elasticsearch-export"]
           envFrom:
             - secretRef:
                 name: app-secret-env-hook
@@ -1641,6 +1644,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 0
+  activeDeadlineSeconds: 1800
   template:
     spec:
       volumes:

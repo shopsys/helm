@@ -10,8 +10,9 @@ Kubernetes. It is a **generic, reusable package** consumed by multiple projects.
 
 Phase 1 (done) is a faithful 1:1 port: the deploy **order** and all **end states** of the
 legacy pipeline are preserved. Phase 2 (planned) is manifest modernization — until then,
-manifests intentionally keep their legacy shape (including oddities like the `sleep 30` in
-the first-deploy migration command). Do not "improve" manifest content without being asked.
+manifests intentionally keep their legacy shape; the few intentional exceptions are
+registered in `docs/migrating-from-shopsys-deployment.md`. Do not "improve" manifest
+content without being asked.
 
 **Helm 4 only** — no Helm 3 backward compatibility (e.g. `helm plugin install` uses
 `--verify=false`, which Helm 3 does not know). Keep CI's `HELM_VERSION` in sync with the

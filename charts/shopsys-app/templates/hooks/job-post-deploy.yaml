@@ -17,6 +17,7 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.deploy.postDeploy.activeDeadlineSeconds }}
   template:
     spec:
       volumes:

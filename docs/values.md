@@ -84,8 +84,9 @@ rabbitmq:                    # infra component + auth/persistence/management
 deploy:
   timestamp: ""              # injected by the wrapper (forces a new cron pod)
   firstDeploy: { enabled: false, loadDemoData: false }
-  migration: { enabled, targets: {continuous, firstDeploy, firstDeployWithDemoData}, resources }
-  postDeploy: { enabled, resources }
+  migration: { enabled, targets: {continuous, firstDeploy, firstDeployWithDemoData},
+               resources, activeDeadlineSeconds }   # hard Job bound, default 1800 s
+  postDeploy: { enabled, resources, activeDeadlineSeconds }   # hard Job bound, default 1800 s
   hooks: { kubectlImage, serviceAccountName }
 
 extraManifests: []           # raw manifests (rendered through tpl) — escape hatch
@@ -99,6 +100,13 @@ entries take precedence over `envFrom` in Kubernetes — never define the same k
 
 Lists (e.g. `security.whitelistIps`, `domains`) **replace** the base value when overridden by
 an environment file — they are not merged. Maps merge deeply.
+
+`deploy.migration.activeDeadlineSeconds` must exceed the longest migration variant of the
+project — first deploys with demo data (`elasticsearch-export` on real data volumes) may
+need a much higher value than the 1800 s default. Keep it below the helmfile timeout
+(`DEPLOY_TIMEOUT`, default 2700 s, raise both together) so a stuck migration fails as a
+`DeadlineExceeded` Job — which the wrapper's recovery path handles — instead of the Helm
+client timing out.
 
 ## Legacy env var → values mapping
 

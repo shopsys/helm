@@ -158,6 +158,20 @@
             "enabled": { "type": "boolean" },
             "loadDemoData": { "type": "boolean" }
           }
+        },
+        "migration": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "activeDeadlineSeconds": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "postDeploy": {
+          "type": "object",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "activeDeadlineSeconds": { "type": "integer", "minimum": 1 }
+          }
         }
       }
     },
