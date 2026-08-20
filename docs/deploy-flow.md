@@ -27,7 +27,7 @@ For the legacy behavior itself see [original-deployment.md](original-deployment.
 │           ├─ hook pre-install,pre-upgrade (w10): migrate-application Job
 │           │     continuous:  phing db-migrations-count-with-maintenance
 │           │                  build-deploy-part-2-db-dependent
-│           │     first:       sleep 30 && phing cluster-first-deploy [+ demo targets]
+│           │     first:       phing cluster-first-deploy [+ demo targets]
 │           │     └─ FAILS → whole apply aborts, old release stays
 │           ├─ manifests apply + rollout wait (webserver, storefront, cron on the
 │           │     new image – the `date` label forces a new pod, consumers, ingresses,

@@ -87,7 +87,11 @@ print_job_logs() {
     local job="$1" title="$2"
     if kubectl -n "${NAMESPACE}" get "job/${job}" > /dev/null 2>&1; then
         section_start "${job//-/_}_logs" "${title}"
-        kubectl logs "job/${job}" --namespace="${NAMESPACE}" || true
+        if ! kubectl logs "job/${job}" --namespace="${NAMESPACE}" 2> /dev/null; then
+            # A deadline-killed Job (activeDeadlineSeconds) has its pod deleted, so no
+            # logs exist - fall back to the Job description (conditions + events)
+            kubectl describe "job/${job}" --namespace="${NAMESPACE}" || true
+        fi
         section_end "${job//-/_}_logs"
     fi
 }

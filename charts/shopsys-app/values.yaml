@@ -353,11 +353,15 @@ deploy:
       continuous: "-verbose db-migrations-count-with-maintenance build-deploy-part-2-db-dependent"
       firstDeploy: "cluster-first-deploy"
       firstDeployWithDemoData: "cluster-first-deploy db-fixtures-demo plugin-demo-data-load friendly-urls-generate domains-urls-replace elasticsearch-export"
-    # Hard bound for the migration Job (seconds); must exceed the longest migration
+    # Hard bound for the migration Job (seconds); must exceed the longest migration -
+    # first deploys with demo data (elasticsearch-export) may need a much higher value.
+    # Keep it below the helmfile timeout (DEPLOY_TIMEOUT, default 2700) so a stuck
+    # migration fails as a DeadlineExceeded Job instead of a Helm client timeout.
     activeDeadlineSeconds: 1800
     resources: {}
   postDeploy:
     enabled: true
+    # Hard bound for the post-deploy Job (seconds)
     activeDeadlineSeconds: 600
     resources: {}
   hooks:

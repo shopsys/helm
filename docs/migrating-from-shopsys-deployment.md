@@ -85,10 +85,15 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
 8. **Namespace** is created by the wrapper/helmfile, not applied as a manifest. It is named
    `<project.name>-<environment>` (replaces the "PROJECT_NAME must contain a dash" rule).
 9. **The legacy `sleep 30`** in the first-deploy migration command is removed — the
-   shopsys-infra release is installed with `wait: true` before the migration hook runs, so
-   readiness is guaranteed without a delay. The migration and post-deploy Jobs are
-   additionally bounded by `deploy.migration.activeDeadlineSeconds` (default 1800 s) and
-   `deploy.postDeploy.activeDeadlineSeconds` (default 600 s).
+   shopsys-infra release is installed with `wait: true` before the migration hook runs
+   (Redis readiness is probe-backed; RabbitMQ has no default readinessProbe, so the wait
+   guarantees a Running broker container, not yet an accepting broker). The migration and
+   post-deploy Jobs are additionally bounded by `deploy.migration.activeDeadlineSeconds`
+   (default 1800 s — first deploys with demo data may need much more, see
+   [values.md](values.md)) and `deploy.postDeploy.activeDeadlineSeconds` (default 600 s).
+   When a deadline fires, the Job controller deletes the running pod — the Job fails as
+   `DeadlineExceeded` (the wrapper's recovery path still triggers), but the pod logs are
+   gone; the wrapper then falls back to `kubectl describe job` output.
 10. **DISPLAY_FINAL_CONFIGURATION** prints one `helmfile template` output instead of two
     kustomize sections.
 11. **`orchestration/kubernetes/` file overrides and the composer `merge` step are gone** —

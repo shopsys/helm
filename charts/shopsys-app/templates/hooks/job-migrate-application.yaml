@@ -9,8 +9,8 @@ it at the start of the next deploy (legacy "Delete previous migration pod" step)
 
 The command variant is selected by deploy.firstDeploy.*:
 - continuous deploy: check migrations + enable maintenance + run db-dependent build phase
-- first deploy: full first deploy of the cluster (the sleep 30 is kept from the legacy
- package to let infrastructure services settle)
+- first deploy: full first deploy of the cluster (the legacy sleep 30 was dropped - the
+ shopsys-infra release is waited on before this hook runs, see the deviations doc)
 - first deploy with demo data: first deploy + demo data import
 */}}
 {{- if .Values.deploy.migration.enabled }}
