@@ -111,8 +111,9 @@ webserver:
     maxReplicas: 3
     targetCPUUtilization: 120
   # PodDisruptionBudget protecting against voluntary disruptions (node drains). Rendered
-  # only when the component runs 2+ replicas (autoscaling enabled or replicas > 1) - a
-  # minAvailable: 1 budget on a single replica would block drains forever.
+  # only when the component is guaranteed to run 2+ replicas (autoscaling enabled with
+  # minReplicas > 1, or fixed replicas > 1) - a minAvailable: 1 budget on a single
+  # replica would block drains forever.
   pdb:
     enabled: true
     minAvailable: 1
@@ -229,7 +230,7 @@ storefront:
     minReplicas: 2
     maxReplicas: 3
     targetCPUUtilization: 120
-  # See webserver.pdb - same gating (autoscaling enabled or replicas > 1).
+  # See webserver.pdb - same gating (autoscaling with minReplicas > 1, or replicas > 1).
   pdb:
     enabled: true
     minAvailable: 1

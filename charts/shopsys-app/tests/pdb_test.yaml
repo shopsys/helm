@@ -26,6 +26,28 @@ tests:
           path: spec.selector.matchLabels.app
           value: webserver-php-fpm
 
+  - it: renders no PDB when autoscaling can scale down to a single replica
+    template: templates/pdb-webserver.yaml
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+          minReplicas: 1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no PDB when the pdb map is nulled by an overlay
+    template: templates/pdb-storefront.yaml
+    set:
+      storefront:
+        autoscaling:
+          enabled: true
+        pdb: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
   - it: renders the PDB when running multiple fixed replicas
     template: templates/pdb-storefront.yaml
     set:

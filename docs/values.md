@@ -32,6 +32,11 @@ Every workload component (`webserver`, `storefront`, `cron`, `consumers.defaults
 | `securityContext` / `podSecurityContext` | security contexts |
 | `terminationGracePeriodSeconds`, `lifecycle` | shutdown behavior |
 
+`topologySpreadConstraints` is a raw passthrough — supply complete constraints. Prefer
+`whenUnsatisfiable: ScheduleAnyway` unless spread is a hard requirement (`DoNotSchedule`
+can leave pods Pending on small clusters), and add `matchLabelKeys: [pod-template-hash]`
+so the spread ignores old-ReplicaSet pods during rolling updates.
+
 ## Top-level structure
 
 ```yaml
@@ -84,7 +89,8 @@ app:                         # shared backend configuration
 
 webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers;
                              #   `pdb: {enabled: true, minAvailable: 1}` - rendered only with
-                             #   2+ replicas (autoscaling on or replicas > 1)
+                             #   guaranteed 2+ replicas (autoscaling with minReplicas > 1,
+                             #   or replicas > 1)
 storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret);
                              #   `pdb` - same as webserver
 cron:                        # component + `instances: [{name, schedule}]`;
@@ -112,6 +118,13 @@ entries take precedence over `envFrom` in Kubernetes — never define the same k
 
 Lists (e.g. `security.whitelistIps`, `domains`) **replace** the base value when overridden by
 an environment file — they are not merged. Maps merge deeply.
+
+To restore the legacy BestEffort behavior (no requests/limits), set the component's
+`resources: null` — for cron via `cron.resources: null`, for a single consumer instance via
+`resources: null` on that instance. **Per consumer instance, null the whole `resources` map
+(or replace it), never a nested key**: a nested null such as
+`resources: {limits: {memory: null}}` survives the per-instance merge and renders a literal
+`memory: null`, which is rejected by the Kubernetes API.
 
 ## Legacy env var → values mapping
 
