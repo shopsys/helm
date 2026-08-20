@@ -28,7 +28,7 @@ Every workload component (`webserver`, `storefront`, `cron`, `consumers.defaults
 | `nodeSelector` / `tolerations` / `affinity` / `priorityClassName` | scheduling |
 | `extraEnv` | extra env entries (raw list, supports `valueFrom`) |
 | `extraVolumes` / `extraVolumeMounts` | additional volumes |
-| `livenessProbe` / `readinessProbe` | probe overrides |
+| `livenessProbe` / `readinessProbe` | probe overrides; empty = the chart default where one exists (`redis`, `rabbitmq`), and setting one REPLACES the default wholesale (no deep merge) |
 | `securityContext` / `podSecurityContext` | security contexts |
 | `terminationGracePeriodSeconds`, `lifecycle` | shutdown behavior |
 

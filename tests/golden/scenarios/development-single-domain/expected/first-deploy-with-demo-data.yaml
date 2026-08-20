@@ -323,7 +323,23 @@ spec:
           resources:
             requests:
               cpu: "0.01"
-          
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq
