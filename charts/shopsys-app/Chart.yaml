@@ -4,7 +4,9 @@ description: Shopsys Platform application (webserver + PHP-FPM, storefront, cron
 type: application
 version: 1.0.0
 appVersion: "1.0.0"
-kubeVersion: ">=1.23.0-0"
+# 1.27 is the first release where the HPA ContainerResource metric type (used by
+# hpa-webserver.yaml) is enabled by default (GA in 1.30).
+kubeVersion: ">=1.27.0-0"
 home: https://github.com/shopsys
 sources:
   - https://github.com/shopsys/deployment

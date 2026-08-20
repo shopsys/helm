@@ -149,5 +149,5 @@ improvising:
   exact 24-step order, all end states, env contract)
 - `docs/deploy-flow.md` — new flow + legacy step/end-state mapping tables
 - `docs/values.md` — values reference + legacy env-var mapping
-- `docs/migrating-from-shopsys-deployment.md` — migration checklist + the 14 intentional
+- `docs/migrating-from-shopsys-deployment.md` — migration checklist + the intentional
   deviations from 1:1 (consult before changing behavior; extend it when adding new ones)

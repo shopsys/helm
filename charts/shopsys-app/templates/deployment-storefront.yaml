@@ -4,6 +4,7 @@ metadata:
   name: storefront
   labels:
     {{- include "shopsys.labels" $ | nindent 4 }}
+    app: storefront
 spec:
   {{- if not .Values.storefront.autoscaling.enabled }}
   replicas: {{ .Values.storefront.replicas }}

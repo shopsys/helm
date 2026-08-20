@@ -3,6 +3,9 @@ Suspends crons before the migration runs (legacy: kubectl exec phing cron-lock +
 Scaling the cron deployment to 0 triggers its preStop drain (cron-lock + wait for running
 instances inside the pod), then this Job waits for the pod to disappear. Tolerates the very
 first deploy when no cron deployment exists yet.
+
+deploy.hooks.kubectlImage must ship BOTH kubectl and /bin/sh - the "|| true" tolerance below
+needs a shell (see the comment on that value).
 */}}
 {{- if .Values.cron.enabled }}
 apiVersion: batch/v1

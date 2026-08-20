@@ -68,6 +68,17 @@ tests:
           path: spec.template.spec.containers[0].command[2]
           pattern: 'kubectl wait --for=delete pod -l app=cron .* --timeout=3660s'
 
+  - it: runs the cron-suspend script with a shell-capable kubectl image
+    template: templates/hooks/job-cron-suspend.yaml
+    asserts:
+      # the script relies on "|| true" tolerance, so the image must provide /bin/sh
+      - equal:
+          path: spec.template.spec.containers[0].command[0]
+          value: /bin/sh
+      - equal:
+          path: spec.template.spec.containers[0].image
+          value: line/kubectl-kustomize:1.34.3-5.8.0
+
   - it: runs post-deploy tasks with legacy ERROR/FAILED semantics
     template: templates/hooks/job-post-deploy.yaml
     asserts:

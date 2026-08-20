@@ -1,0 +1,37 @@
+suite: nginx configuration
+values:
+  - ./values/required.yaml
+templates:
+  - templates/configmap-nginx.yaml
+tests:
+  - it: proxies content images to the configured S3 endpoint
+    asserts:
+      - matchRegex:
+          path: data["project-nginx.conf"]
+          pattern: 'proxy_pass\s+https://s3\.example\.com/myproject-test/web\$request_uri;'
+
+  - it: fails the render when s3Endpoint is empty and the default vhost is used
+    set:
+      app:
+        s3Endpoint: ""
+    asserts:
+      - failedTemplate:
+          errorMessage: app.s3Endpoint is required by the default nginx vhost (content images are proxied to S3); set it, or provide a custom webserver.nginx.projectConfig
+
+  - it: does not require s3Endpoint when the project supplies its own vhost
+    set:
+      app:
+        s3Endpoint: ""
+      webserver:
+        nginx:
+          projectConfig: |
+            server {
+                listen 8080;
+            }
+    asserts:
+      - matchRegex:
+          path: data["project-nginx.conf"]
+          pattern: 'listen 8080;'
+      - notMatchRegex:
+          path: data["project-nginx.conf"]
+          pattern: 'proxy_pass'

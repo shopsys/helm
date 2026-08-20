@@ -358,9 +358,16 @@ deploy:
     enabled: true
     resources: {}
   hooks:
-    # kubectlImage is the image used by the cron-suspend hook Job; pinned tag on purpose
-    # (bitnami/kubectl moved to the unmaintained bitnamilegacy distribution in 2025)
-    kubectlImage: rancher/kubectl:v1.33.13
+    # kubectlImage is the image used by the cron-suspend hook Job; pinned tag on purpose.
+    # It MUST contain both kubectl and /bin/sh - the hook runs a small shell script whose
+    # "2>/dev/null || true" tolerance (missing cron deployment, kubectl wait timeout) cannot
+    # be expressed without a shell. Shell-less kubectl images (rancher/kubectl, distroless
+    # registry.k8s.io/kubectl) therefore do NOT work. bitnami/kubectl is not an option
+    # either - it moved to the unmaintained bitnamilegacy distribution in 2025, and
+    # alpine/kubectl prunes old tags (pinned tags disappear after ~a year).
+    # line/kubectl-kustomize is actively maintained, keeps all historical tags and is
+    # ~100 MB (the bundled kustomize is unused). The tag is <kubectl>-<kustomize> version.
+    kubectlImage: line/kubectl-kustomize:1.34.3-5.8.0
     serviceAccountName: deploy-hooks
 
 # Additional raw manifests rendered through tpl (escape hatch for project additions).

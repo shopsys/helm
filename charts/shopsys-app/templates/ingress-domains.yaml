@@ -14,7 +14,6 @@ metadata:
   labels:
     {{- include "shopsys.labels" $ | nindent 4 }}
   annotations:
-    ingress.kubernetes.io/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: {{ $.Values.ingress.clusterIssuer }}
     nginx.ingress.kubernetes.io/proxy-body-size: {{ $.Values.ingress.proxyBodySize }}
     {{- /* Redirect http to https and redirect between the www and non-www variant of the domain */}}
