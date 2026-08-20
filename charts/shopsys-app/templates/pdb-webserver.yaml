@@ -1,0 +1,18 @@
+{{/* Rendered only when the webserver is guaranteed to run with 2+ replicas — a PDB with
+     minAvailable: 1 on a single-replica Deployment would block node drains forever.
+     Autoscaling counts only with minReplicas > 1 (the HPA may scale down to minReplicas). */}}
+{{- $w := .Values.webserver }}
+{{- if and ($w.pdb).enabled (or (and $w.autoscaling.enabled (gt (int $w.autoscaling.minReplicas) 1)) (gt (int $w.replicas) 1)) }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: webserver-php-fpm
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+    app: webserver-php-fpm
+spec:
+  minAvailable: {{ $w.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app: webserver-php-fpm
+{{- end }}

@@ -53,6 +53,25 @@ tests:
           path: spec.template.spec.containers[0].env[-1].name
           value: FROM_FIELD
 
+  - it: propagates topologySpreadConstraints into the pod spec
+    template: templates/deployment-storefront.yaml
+    set:
+      storefront:
+        topologySpreadConstraints:
+          - maxSkew: 1
+            topologyKey: topology.kubernetes.io/zone
+            whenUnsatisfiable: ScheduleAnyway
+            labelSelector:
+              matchLabels:
+                app: storefront
+    asserts:
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].topologyKey
+          value: topology.kubernetes.io/zone
+      - equal:
+          path: spec.template.spec.topologySpreadConstraints[0].maxSkew
+          value: 1
+
   - it: allows probe overrides
     template: templates/deployment-storefront.yaml
     set:

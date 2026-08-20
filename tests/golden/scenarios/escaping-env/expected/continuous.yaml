@@ -373,6 +373,42 @@ spec:
             pathType: Prefix
 
 ---
+# Source: shopsys-app/templates/pdb-storefront.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: storefront
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+    app: storefront
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: storefront
+
+---
+# Source: shopsys-app/templates/pdb-webserver.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: webserver-php-fpm
+  labels:
+    app.kubernetes.io/name: shopsys-app
+    app.kubernetes.io/instance: shopsys-app
+    app.kubernetes.io/managed-by: Helm
+    helm.sh/chart: shopsys-app-1.0.0
+    app: webserver-php-fpm
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: webserver-php-fpm
+
+---
 # Source: shopsys-app/templates/secret-app-env.yaml
 apiVersion: v1
 kind: Secret

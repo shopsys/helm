@@ -1,0 +1,86 @@
+suite: pod disruption budgets
+values:
+  - ./values/required.yaml
+templates:
+  - templates/pdb-webserver.yaml
+  - templates/pdb-storefront.yaml
+tests:
+  - it: renders no PDB for single-replica components without autoscaling
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the PDB when autoscaling is enabled
+    template: templates/pdb-webserver.yaml
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.minAvailable
+          value: 1
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: webserver-php-fpm
+
+  - it: renders no PDB when autoscaling can scale down to a single replica
+    template: templates/pdb-webserver.yaml
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+          minReplicas: 1
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders no PDB when the pdb map is nulled by an overlay
+    template: templates/pdb-storefront.yaml
+    set:
+      storefront:
+        autoscaling:
+          enabled: true
+        pdb: null
+    asserts:
+      - hasDocuments:
+          count: 0
+
+  - it: renders the PDB when running multiple fixed replicas
+    template: templates/pdb-storefront.yaml
+    set:
+      storefront:
+        replicas: 3
+    asserts:
+      - hasDocuments:
+          count: 1
+      - equal:
+          path: spec.selector.matchLabels.app
+          value: storefront
+
+  - it: honors a minAvailable override
+    template: templates/pdb-webserver.yaml
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+        pdb:
+          minAvailable: 2
+    asserts:
+      - equal:
+          path: spec.minAvailable
+          value: 2
+
+  - it: can be disabled explicitly
+    template: templates/pdb-webserver.yaml
+    set:
+      webserver:
+        autoscaling:
+          enabled: true
+        pdb:
+          enabled: false
+    asserts:
+      - hasDocuments:
+          count: 0

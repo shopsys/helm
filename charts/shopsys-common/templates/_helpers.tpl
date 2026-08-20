@@ -264,6 +264,10 @@ tolerations:
 affinity:
 {{ toYaml . | indent 2 }}
 {{- end }}
+{{- with .component.topologySpreadConstraints }}
+topologySpreadConstraints:
+{{ toYaml . | indent 2 }}
+{{- end }}
 {{- with .component.podSecurityContext }}
 securityContext:
 {{ toYaml . | indent 2 }}

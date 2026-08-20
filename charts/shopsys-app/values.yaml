@@ -2,7 +2,8 @@
 #
 # Every workload component (webserver, storefront, cron, consumers) exposes the same
 # standard keys: image {repository, tag, pullPolicy}, replicas, resources, podAnnotations,
-# podLabels, nodeSelector, tolerations, affinity, extraEnv, extraVolumes, extraVolumeMounts,
+# podLabels, nodeSelector, tolerations, affinity, topologySpreadConstraints, extraEnv,
+# extraVolumes, extraVolumeMounts,
 # livenessProbe/readinessProbe, securityContext/podSecurityContext, lifecycle,
 # terminationGracePeriodSeconds, priorityClassName. Webserver and storefront additionally
 # expose independent `autoscaling` sections.
@@ -96,6 +97,13 @@ webserver:
     minReplicas: 2
     maxReplicas: 3
     targetCPUUtilization: 120
+  # PodDisruptionBudget protecting against voluntary disruptions (node drains). Rendered
+  # only when the component is guaranteed to run 2+ replicas (autoscaling enabled with
+  # minReplicas > 1, or fixed replicas > 1) - a minAvailable: 1 budget on a single
+  # replica would block drains forever.
+  pdb:
+    enabled: true
+    minAvailable: 1
   progressDeadlineSeconds: 1500
   terminationGracePeriodSeconds: 120
   strategy:
@@ -189,6 +197,7 @@ webserver:
                   operator: In
                   values:
                     - redis
+  topologySpreadConstraints: []
   podSecurityContext: {}
   extraEnv: []
   extraVolumes: []
@@ -208,6 +217,10 @@ storefront:
     minReplicas: 2
     maxReplicas: 3
     targetCPUUtilization: 120
+  # See webserver.pdb - same gating (autoscaling with minReplicas > 1, or replicas > 1).
+  pdb:
+    enabled: true
+    minAvailable: 1
   terminationGracePeriodSeconds: 60
   resources:
     limits:
@@ -251,6 +264,7 @@ storefront:
                   operator: In
                   values:
                     - storefront
+  topologySpreadConstraints: []
   podSecurityContext: {}
   securityContext: {}
   extraEnv: []
@@ -302,6 +316,7 @@ cron:
                 operator: In
                 values:
                   - background
+  topologySpreadConstraints: []
   podSecurityContext: {}
   extraEnv: []
   extraVolumes: []
@@ -341,6 +356,7 @@ consumers:
                   operator: In
                   values:
                     - background
+    topologySpreadConstraints: []
     podSecurityContext: {}
     securityContext: {}
     extraEnv: []
