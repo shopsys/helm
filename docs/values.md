@@ -48,6 +48,8 @@ ingress:
   className: nginx
   clusterIssuer: letsencrypt-prod
   proxyBodySize: 32m
+  redirectStyle: snippet     # snippet = https-first chain (needs allow-snippet-annotations);
+                             # native = built-in from-to-www-redirect (insecure www hop, #10024)
   extraAnnotations: {}
 
 security:

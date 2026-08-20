@@ -121,3 +121,27 @@ tests:
       - documentIndex: 1
         notExists:
           path: metadata.annotations["nginx.ingress.kubernetes.io/server-snippet"]
+
+  - it: uses the built-in redirect annotation in native redirect style
+    set:
+      ingress:
+        redirectStyle: native
+      domains:
+        - hostname: www.example.com
+    asserts:
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"]
+          value: "true"
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/ssl-redirect"]
+          value: "true"
+      - notExists:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
+      - lengthEqual:
+          path: spec.rules
+          count: 1
+      - equal:
+          path: spec.tls[0].hosts
+          value:
+            - www.example.com
+            - example.com
