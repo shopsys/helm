@@ -132,6 +132,9 @@ tests:
       - equal:
           path: metadata.annotations["nginx.ingress.kubernetes.io/from-to-www-redirect"]
           value: "true"
+      - equal:
+          path: metadata.annotations["nginx.ingress.kubernetes.io/ssl-redirect"]
+          value: "true"
       - notExists:
           path: metadata.annotations["nginx.ingress.kubernetes.io/configuration-snippet"]
       - lengthEqual:

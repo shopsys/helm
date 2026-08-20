@@ -28,9 +28,12 @@ ingress:
   #   snippet (default) - a configuration-snippet guaranteeing the https-first chain;
   #     requires allow-snippet-annotations: true on the controller (see README requirements
   #     for the multi-tenant trust implications)
-  #   native - the built-in from-to-www-redirect annotation; works on locked-down
-  #     controllers, but the www redirect happens BEFORE the HTTPS upgrade, producing an
-  #     insecure http->http->https hop (kubernetes/ingress-nginx#6340)
+  #   native - the built-in from-to-www-redirect annotation (plus an explicit
+  #     ssl-redirect); removes the redirect snippet for locked-down controllers, but the
+  #     www redirect happens BEFORE the HTTPS upgrade, producing an insecure
+  #     http->http->https hop (kubernetes/ingress-nginx#10024). Note: with
+  #     security.cloudflare.enabled the ingresses still carry a server-snippet, which
+  #     controllers without allow-snippet-annotations also reject.
   redirectStyle: snippet
   extraAnnotations: {}   # applied to every e-shop domain ingress
 

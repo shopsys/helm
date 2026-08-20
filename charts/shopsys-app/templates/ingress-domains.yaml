@@ -20,11 +20,17 @@ metadata:
     {{- /* Redirect http to https and redirect between the www and non-www variant of the
            domain. The default "snippet" style guarantees the https-first chain - the
            built-in redirect annotations redirect BEFORE the HTTPS upgrade, producing an
-           insecure http->http->https chain (kubernetes/ingress-nginx#6340, unresolved).
+           insecure http->http->https chain (kubernetes/ingress-nginx#10024 for
+           from-to-www-redirect; #6340 for app-root - both unresolved).
            It requires allow-snippet-annotations: true on the controller; the "native"
-           style is the fallback for locked-down controllers. */}}
+           style is the fallback for locked-down controllers (note: the Cloudflare
+           server-snippet below is also rejected by such controllers). In native mode the
+           explicit nginx-prefixed ssl-redirect is required - the legacy-prefixed
+           annotation above is not read by ingress-nginx, and without it the https
+           upgrade would silently rely on the controller's global ssl-redirect default. */}}
     {{- if eq $.Values.ingress.redirectStyle "native" }}
     nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
     {{- else if hasPrefix "www." $base }}
     nginx.ingress.kubernetes.io/configuration-snippet: {{ `if ($scheme = http) { return 308 https://$host$request_uri; } if ($host ~ ^(?!www\.)(?<domain>.+)$) { return 308 https://www.$domain$request_uri; }` | quote }}
     {{- else }}
@@ -67,9 +73,10 @@ spec:
                   number: 8080
             path: {{ if $path }}/{{ $path }}{{ else }}/{{ end }}
             pathType: Prefix
-    {{- /* The bare counterpart rule serves the redirect vhost in snippet style;
-           from-to-www-redirect generates its own counterpart server, so the explicit
-           rule would conflict with it */}}
+    {{- /* The bare counterpart rule serves the redirect vhost in snippet style. In
+           native style it MUST be dropped: when the counterpart host is defined as a
+           rule (in any Ingress), ingress-nginx omits the from-to-www-redirect server
+           entirely - the redirect would be silently dropped, not merely duplicated */}}
     {{- if ne $.Values.ingress.redirectStyle "native" }}
     - host: {{ $redirect | quote }}
     {{- end }}

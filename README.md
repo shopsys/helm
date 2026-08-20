@@ -30,14 +30,19 @@ examples/                what a consuming project copies
   Critical` on ≥ 1.12) — with the default `ingress.redirectStyle: snippet`, the e-shop
   ingresses use a `configuration-snippet` to guarantee the https-first redirect chain (the
   built-in redirect annotations redirect before the HTTPS upgrade, see
-  [kubernetes/ingress-nginx#6340](https://github.com/kubernetes/ingress-nginx/issues/6340));
+  [kubernetes/ingress-nginx#10024](https://github.com/kubernetes/ingress-nginx/issues/10024)
+  for `from-to-www-redirect` and
+  [#6340](https://github.com/kubernetes/ingress-nginx/issues/6340) for `app-root`);
   on a controller with default settings the admission webhook rejects these ingresses.
-  ⚠️ Enabling snippets is a **controller-wide, Critical-risk capability**: anyone allowed to
+  ⚠️ Enabling snippets is a **controller-wide, Critical-risk capability** (snippets were
+  made opt-out after CVE-2021-25742): anyone allowed to
   create Ingresses on that controller can inject NGINX directives, which upstream warns may
   expose controller/cluster secrets — Ingress authors must be trusted. On shared clusters use
   a dedicated controller or tightly restricted Ingress RBAC, or switch to
-  `ingress.redirectStyle: native` (built-in `from-to-www-redirect`; no snippets needed, but
-  the www redirect happens before the HTTPS upgrade — an insecure `http → http → https` hop)
+  `ingress.redirectStyle: native` (built-in `from-to-www-redirect`; removes the redirect
+  snippet, but the www redirect happens before the HTTPS upgrade — an insecure
+  `http → http → https` hop; note that `security.cloudflare.enabled` still emits a
+  `server-snippet`, so it must stay disabled on locked-down controllers)
 
 ## Quick start
 
