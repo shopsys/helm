@@ -160,3 +160,23 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
       storefront, consumers, hook Jobs) — their user is project-specific; enable it per
       project after verifying the image. RabbitMQ keeps its user (existing PVC data
       ownership); the cron container still runs crond as root (tracked separately).
+    - reverting nginx to root (e.g. for a custom config that still binds port 80) must
+      also null out the capabilities — maps deep-merge on override, so the default
+      `drop: ["ALL"]` would survive and root nginx CrashLoops without `CAP_CHOWN`/
+      `CAP_SETUID`:
+
+      ```yaml
+      webserver:
+        nginx:
+          securityContext:
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            readOnlyRootFilesystem: false
+            capabilities: null
+      ```
+    - these defaults alone do NOT make the pods pass the Pod Security Admission
+      `restricted` profile — that additionally requires `runAsNonRoot` and
+      `capabilities: {drop: ["ALL"]}` on every container, which for the application
+      images must be enabled per project. Verify on a real cluster before enforcing
+      `restricted` on the namespace.

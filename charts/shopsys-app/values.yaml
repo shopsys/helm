@@ -329,6 +329,10 @@ cron:
     requests:
       cpu: "100m"
       memory: 300Mi
+  # Cron is deliberately excluded from the default hardening entirely (no seccompProfile /
+  # allowPrivilegeEscalation defaults, not just the root user): crond stays untouched as a
+  # blast-radius choice until the crond rework lands - it is the one legacy-root workload
+  # and is tracked separately. Hardening can still be opted into via these keys.
   securityContext:
     runAsUser: 0
   podAnnotations: {}
@@ -429,6 +433,14 @@ deploy:
     # (bitnami/kubectl moved to the unmaintained bitnamilegacy distribution in 2025)
     kubectlImage: rancher/kubectl:v1.33.13
     serviceAccountName: deploy-hooks
+    # Security contexts of the phing hook Jobs (migrate-application, post-deploy). They run
+    # the project's application image, so only the root-and-non-root-safe subset is
+    # defaulted - same reasoning as webserver.phpFpm.securityContext.
+    podSecurityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
 
 # Additional raw manifests rendered through tpl (escape hatch for project additions).
 extraManifests: []

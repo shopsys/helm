@@ -97,7 +97,7 @@ deploy:
   firstDeploy: { enabled: false, loadDemoData: false }
   migration: { enabled, targets: {continuous, firstDeploy, firstDeployWithDemoData}, resources }
   postDeploy: { enabled, resources }
-  hooks: { kubectlImage, serviceAccountName }
+  hooks: { kubectlImage, serviceAccountName, podSecurityContext, securityContext }
 
 extraManifests: []           # raw manifests (rendered through tpl) — escape hatch
 ```
