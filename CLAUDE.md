@@ -134,6 +134,10 @@ improvising:
   conventions (incl. stacked PRs)
 - `watch-pr` — CI watching, Copilot review triage protocol (incl. suppressed comments;
   never resolve threads yourself)
+- `review-pr` — detailed code review of one PR: stacked-base scoping, verification-first
+  findings, GitHub review with inline comments signed "Claude Agent (CR)"
+- `review-open-prs` — fan-out of `review-pr` over multiple/all open PRs via parallel
+  worktree-isolated agents, plus cross-PR verification, cleanup and summary
 - `implement-issue` — issue lifecycle: triage, scope-deviation records, closing retrospective
 - `create-issue` — backlog conventions: body structure, title prefixes, label taxonomy
 - `sync-upstream-deployment` — porting changes from the legacy shopsys/deployment package
