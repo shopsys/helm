@@ -110,3 +110,6 @@ tests:
       - equal:
           path: spec.template.spec.serviceAccountName
           value: shopsys-infra
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false
