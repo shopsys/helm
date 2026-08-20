@@ -76,8 +76,10 @@ app:                         # shared backend configuration
 
 webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers
 storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret)
-cron:                        # component + `instances: [{name, schedule}]`
-consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`
+cron:                        # component + `instances: [{name, schedule}]`;
+                             #   default resources: requests 100m/300Mi, limits 1Gi memory
+consumers:                   # `defaults` + `instances: [{name, transports, replicas, ...}]`;
+                             #   default resources: requests 50m/300Mi, limits 1Gi memory
 redis:                       # infra component + `config` (redis.conf)
 rabbitmq:                    # infra component + auth/persistence/management
 
@@ -99,6 +101,13 @@ entries take precedence over `envFrom` in Kubernetes — never define the same k
 
 Lists (e.g. `security.whitelistIps`, `domains`) **replace** the base value when overridden by
 an environment file — they are not merged. Maps merge deeply.
+
+To restore the legacy BestEffort behavior (no requests/limits), set the component's
+`resources: null` — for cron via `cron.resources: null`, for a single consumer instance via
+`resources: null` on that instance. **Per consumer instance, null the whole `resources` map
+(or replace it), never a nested key**: a nested null such as
+`resources: {limits: {memory: null}}` survives the per-instance merge and renders a literal
+`memory: null`, which is rejected by the Kubernetes API.
 
 ## Legacy env var → values mapping
 

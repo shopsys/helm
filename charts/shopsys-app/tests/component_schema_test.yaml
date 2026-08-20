@@ -4,6 +4,7 @@ values:
 templates:
   - templates/deployment-storefront.yaml
   - templates/deployment-webserver-php-fpm.yaml
+  - templates/deployment-consumer.yaml
 tests:
   - it: propagates scheduling and volume keys into the pod spec
     template: templates/deployment-storefront.yaml
@@ -106,6 +107,45 @@ tests:
           value:
             - name: my-pull-secret
             - name: other-secret
+
+  - it: ships default consumer resources and lets an instance override them
+    template: templates/deployment-consumer.yaml
+    set:
+      consumers:
+        instances:
+          - name: email
+            transports: email_transport
+          - name: heavy
+            transports: heavy_transport
+            resources:
+              requests:
+                cpu: "500m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: "50m"
+              memory: 300Mi
+        documentIndex: 0
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "500m"
+        documentIndex: 1
+
+  - it: lets an instance opt out of resources entirely (legacy BestEffort)
+    template: templates/deployment-consumer.yaml
+    set:
+      consumers:
+        instances:
+          - name: besteffort
+            transports: besteffort_transport
+            resources: null
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources
 
   - it: propagates pod annotations and labels
     template: templates/deployment-webserver-php-fpm.yaml

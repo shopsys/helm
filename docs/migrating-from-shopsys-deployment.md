@@ -124,3 +124,12 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     env vars (works with any registry — GCR/GAR via username `_json_key` and the service
     account JSON as the password); the GitLab-flavored `CI_REGISTRY`/`DEPLOY_REGISTER_*`
     variables keep working as a fallback.
+21. **Default resources for cron and consumers**: the legacy package shipped cron and
+    consumer pods with no requests/limits (`BestEffort` QoS). The chart now defaults to
+    conservative values (cron: requests `100m`/`300Mi`, consumers: requests `50m`/`300Mi`;
+    both limited to `1Gi` memory) — tune them per project/environment via
+    `cron.resources` and `consumers.defaults.resources` (or per instance). QoS changes
+    from `BestEffort` to `Burstable`: with the request far below the limit nodes can
+    overcommit, and anything bursting past `1Gi` is now OOMKilled instead of merely
+    evictable — check your crons'/consumers' peak memory usage before relying on the
+    defaults, and set `resources: null` on a component to restore the legacy behavior.

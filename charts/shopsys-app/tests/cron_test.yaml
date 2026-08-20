@@ -93,3 +93,39 @@ tests:
       - notMatchRegex:
           path: data.cron
           pattern: 'project_secret_env'
+
+  - it: ships default resource requests and limits
+    template: templates/deployment-cron.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources
+          value:
+            limits:
+              memory: 1Gi
+            requests:
+              cpu: "100m"
+              memory: 300Mi
+
+  - it: deep-merges resource overrides with the defaults
+    template: templates/deployment-cron.yaml
+    set:
+      cron:
+        resources:
+          requests:
+            cpu: "10m"
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].resources.requests.cpu
+          value: "10m"
+      - equal:
+          path: spec.template.spec.containers[0].resources.limits.memory
+          value: 1Gi
+
+  - it: drops the resources block entirely when set to null (legacy BestEffort opt-out)
+    template: templates/deployment-cron.yaml
+    set:
+      cron:
+        resources: null
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources
