@@ -120,3 +120,12 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].resources.limits.memory
           value: 1Gi
+
+  - it: drops the resources block entirely when set to null (legacy BestEffort opt-out)
+    template: templates/deployment-cron.yaml
+    set:
+      cron:
+        resources: null
+    asserts:
+      - notExists:
+          path: spec.template.spec.containers[0].resources

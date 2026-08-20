@@ -264,6 +264,7 @@ checksum/php-fpm: {{ printf "%s%s" ($root.Values.webserver.phpFpm.config | defau
      Rendered at zero indent — use `| nindent N` at the call site. */}}
 {{- define "shopsys.podSettings" -}}
 serviceAccountName: {{ include "shopsys.serviceAccountName" .root }}
+automountServiceAccountToken: {{ .root.Values.serviceAccount.automountToken }}
 {{- with .component.nodeSelector }}
 nodeSelector:
 {{ toYaml . | indent 2 }}

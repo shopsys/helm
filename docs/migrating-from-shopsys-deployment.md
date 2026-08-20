@@ -128,11 +128,16 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     consumer pods with no requests/limits (`BestEffort` QoS). The chart now defaults to
     conservative values (cron: requests `100m`/`300Mi`, consumers: requests `50m`/`300Mi`;
     both limited to `1Gi` memory) — tune them per project/environment via
-    `cron.resources` and `consumers.defaults.resources` (or per instance).
+    `cron.resources` and `consumers.defaults.resources` (or per instance). QoS changes
+    from `BestEffort` to `Burstable`: with the request far below the limit nodes can
+    overcommit, and anything bursting past `1Gi` is now OOMKilled instead of merely
+    evictable — check your crons'/consumers' peak memory usage before relying on the
+    defaults, and set `resources: null` on a component to restore the legacy behavior.
 22. **PodDisruptionBudgets for webserver and storefront**: the legacy package had none — a
     node drain could evict all replicas at once. The chart now renders a
-    `minAvailable: 1` PDB per component whenever it runs 2+ replicas (autoscaling enabled
-    or `replicas > 1`); single-replica setups get no PDB (it would block drains). Opt out
+    `minAvailable: 1` PDB per component whenever it is guaranteed to run 2+ replicas
+    (autoscaling enabled with `minReplicas > 1`, or fixed `replicas > 1`); setups that can
+    run a single replica get no PDB (it would block drains). Opt out
     via `webserver.pdb.enabled` / `storefront.pdb.enabled`. `topologySpreadConstraints`
     is also available as a standard component key (empty by default — the legacy
     anti-affinity defaults are kept untouched).
@@ -140,7 +145,9 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     `default` ServiceAccount with its API token mounted. Each chart now creates its own
     ServiceAccount (`shopsys-app` / `shopsys-infra`) with
     `automountServiceAccountToken: false` — none of the workloads talk to the Kubernetes
-    API. The hook Jobs are unchanged: `cron-suspend` keeps the `deploy-hooks` SA (needs the
+    API. The same setting is also emitted at pod level on every workload pod, so the
+    no-token guarantee holds even when `serviceAccount.create=false` points at an external
+    account (or falls back to the namespace `default` SA). The hook Jobs are unchanged: `cron-suspend` keeps the `deploy-hooks` SA (needs the
     API), and the migration/post-deploy Jobs stay on the default SA (a `pre-install` hook
     cannot reference the chart SA, which does not exist yet) but no longer mount its token.
     Configure via `serviceAccount: {create, name, automountToken}`.

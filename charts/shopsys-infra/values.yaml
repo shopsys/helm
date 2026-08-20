@@ -32,7 +32,8 @@ registry:
   existingSecret: ""
 
 # ServiceAccount the redis/rabbitmq pods run under; see the app chart for the shared-values
-# caveat (leave `name` empty - it defaults to the chart name per chart).
+# caveat (leave `name` empty - it defaults to the chart name per chart) and for the
+# automountToken semantics (applied on the SA and at pod level on every workload pod).
 serviceAccount:
   create: true
   name: ""
