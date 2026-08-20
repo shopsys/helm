@@ -124,3 +124,14 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     env vars (works with any registry — GCR/GAR via username `_json_key` and the service
     account JSON as the password); the GitLab-flavored `CI_REGISTRY`/`DEPLOY_REGISTER_*`
     variables keep working as a fallback.
+21. **RabbitMQ has default probes** (legacy declared none, so the pod counted as Ready the
+    moment the container process started): `readinessProbe` is a TCP check on the AMQP port
+    5672 — the upstream Kubernetes Operator's default and the practice recommended by the
+    [RabbitMQ docs](https://www.rabbitmq.com/docs/monitoring#health-checks), because the AMQP
+    listener opens as one of the last boot steps — and `livenessProbe` is the stage-1
+    `rabbitmq-diagnostics -q ping` with a deliberately generous budget (60 s initial delay,
+    3 × 30 s). This makes the infra release's `wait: true` mean "the broker accepts
+    connections" — the premise the migration hook's ordering relies on. Both are overridable
+    wholesale via `rabbitmq.livenessProbe` / `rabbitmq.readinessProbe` (set = replace, no
+    deep merge). Consequence: a broker that never finishes booting now fails the deploy
+    instead of letting the migration run against an unreachable broker.

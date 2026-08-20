@@ -53,7 +53,45 @@ spec:
             {{- end }}
           resources:
             {{- toYaml .Values.rabbitmq.resources | nindent 12 }}
-          {{- include "shopsys.containerSettings" .Values.rabbitmq | nindent 10 }}
+          {{- with .Values.rabbitmq.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.rabbitmq.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.rabbitmq.livenessProbe | nindent 12 }}
+          {{- else }}
+          {{- /* Stage-1 health check (https://www.rabbitmq.com/docs/monitoring#health-checks):
+               validates the runtime is up and CLI authentication works. rabbitmq-diagnostics
+               spawns an Erlang VM, so the budget is deliberately generous - a false positive
+               here costs a full broker restart. */}}
+          livenessProbe:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+          {{- end }}
+          {{- if .Values.rabbitmq.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.rabbitmq.readinessProbe | nindent 12 }}
+          {{- else }}
+          {{- /* The AMQP listener opens as one of the last boot steps, so a TCP check on 5672
+               is exactly "the broker accepts connections" - the upstream Kubernetes
+               Operator's default and the practice recommended by the RabbitMQ docs (CLI
+               checks are explicitly discouraged as readiness probes). */}}
+          readinessProbe:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          {{- end }}
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq

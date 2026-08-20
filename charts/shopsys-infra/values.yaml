@@ -131,6 +131,9 @@ rabbitmq:
   extraEnv: []
   extraVolumes: []
   extraVolumeMounts: []
+  # Empty = the chart defaults render (liveness: `rabbitmq-diagnostics -q ping`,
+  # readiness: TCP check on the AMQP port 5672). Setting a probe REPLACES the default
+  # wholesale - there is no deep merge, so an override must be complete.
   livenessProbe: {}
   readinessProbe: {}
   priorityClassName: ""

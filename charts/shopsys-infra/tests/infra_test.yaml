@@ -44,6 +44,76 @@ tests:
                 name: rabbitmq-credentials
                 key: user
 
+  - it: gives rabbitmq default probes so infra readiness means an accepting broker
+    template: templates/statefulset-rabbitmq.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            tcpSocket:
+              port: 5672
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - ping
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 15
+            failureThreshold: 3
+
+  - it: replaces the default rabbitmq probes wholesale when they are set
+    template: templates/statefulset-rabbitmq.yaml
+    set:
+      rabbitmq:
+        livenessProbe:
+          exec:
+            command:
+              - rabbitmq-diagnostics
+              - -q
+              - check_running
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /api/health/checks/alarms
+            port: 15672
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].livenessProbe
+          value:
+            exec:
+              command:
+                - rabbitmq-diagnostics
+                - -q
+                - check_running
+            periodSeconds: 20
+      - equal:
+          path: spec.template.spec.containers[0].readinessProbe
+          value:
+            httpGet:
+              path: /api/health/checks/alarms
+              port: 15672
+
+  - it: renders the rabbitmq container securityContext next to the probes
+    template: templates/statefulset-rabbitmq.yaml
+    set:
+      rabbitmq:
+        securityContext:
+          runAsNonRoot: true
+    asserts:
+      - equal:
+          path: spec.template.spec.containers[0].securityContext.runAsNonRoot
+          value: true
+      - exists:
+          path: spec.template.spec.containers[0].readinessProbe
+
   - it: derives the management hostname from the first domain
     template: templates/ingress-rabbitmq.yaml
     set:
