@@ -26,7 +26,7 @@ helmfile -e devel diff
 ./deploy/deploy.sh devel          # full deploy incl. slack, failure recovery, website check
 
 # Tests (run all of these before considering a change done)
-./tests/run-golden-tests.sh                    # snapshot tests (5 scenarios × 3 variants)
+./tests/run-golden-tests.sh                    # snapshot tests (6 scenarios × 3 variants)
 ./tests/run-golden-tests.sh --update           # regenerate snapshots after INTENTIONAL changes
 ./tests/run-golden-tests.sh basic-production   # single scenario
 helm unittest charts/shopsys-app charts/shopsys-infra

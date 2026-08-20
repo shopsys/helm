@@ -1,0 +1,46 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- /* The namespace-wide default deny (and the optional egress lockdown) live in the
+       infra chart; this chart allows traffic to its own workloads. */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webserver
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: webserver-php-fpm
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # e-shop and MCP ingresses
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressControllerNamespace | nindent 12 }}
+        # storefront server-side requests (INTERNAL_ENDPOINT) and other app pods
+        - podSelector: {}
+      ports:
+        - port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-storefront
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: storefront
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # the webserver's nginx proxies /_next/ and @storefront to the storefront; no
+        # shipped ingress targets the storefront directly (use networkPolicy.extraIngress
+        # when a project adds one)
+        - podSelector: {}
+      ports:
+        - port: 3000
+{{- end }}
