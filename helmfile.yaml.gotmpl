@@ -46,7 +46,7 @@ releases:
       - {{ $namespace }}/shopsys-infra
     wait: true
     waitForJobs: true
-    timeout: {{ env "DEPLOY_TIMEOUT" | default 5400 }}
+    timeout: {{ env "DEPLOY_TIMEOUT" | default 2700 }}
     values:
       - {{ toYaml .Values | nindent 8 }}
       - project:
