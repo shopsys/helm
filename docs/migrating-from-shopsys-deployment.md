@@ -100,8 +100,8 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     [values.md](values.md)).
 15. **Pinned image tags** (Helm best practice — never use floating tags): the redis exporter
     is pinned (`oliver006/redis_exporter:v1.89.0`, legacy pulled an untagged image with
-    `pullPolicy: Always`) and the hook kubectl image is `alpine/k8s:1.33.13` (it has to ship
-    `/bin/sh` next to `kubectl` — the cron-suspend script needs a shell).
+    `pullPolicy: Always`) and the hook kubectl image is `line/kubectl-kustomize:1.34.3-5.8.0`
+    (it has to ship `/bin/sh` next to `kubectl` — the cron-suspend script needs a shell).
     Both are plain values overridable per project/environment.
 16. **Standard Helm labels** (`app.kubernetes.io/name|instance|managed-by`, `helm.sh/chart`)
     are added to every resource. Purely additive — the legacy `app:` selector labels are kept
