@@ -90,7 +90,9 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
    guarantees a Running broker container, not yet an accepting broker). The migration and
    post-deploy Jobs are additionally bounded by `deploy.migration.activeDeadlineSeconds`
    (default 1800 s — first deploys with demo data may need much more, see
-   [values.md](values.md)) and `deploy.postDeploy.activeDeadlineSeconds` (default 600 s).
+   [values.md](values.md)) and `deploy.postDeploy.activeDeadlineSeconds` (default 1800 s;
+   the two bounds together can exceed `DEPLOY_TIMEOUT` — acceptable, both hitting their
+   ceiling in one deploy is not a normal scenario).
    When a deadline fires, the Job controller deletes the running pod — the Job fails as
    `DeadlineExceeded` (the wrapper's recovery path still triggers), but the pod logs are
    gone; the wrapper then falls back to `kubectl describe job` output.

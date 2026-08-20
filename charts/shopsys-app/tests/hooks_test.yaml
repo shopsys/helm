@@ -82,7 +82,7 @@ tests:
           pattern: 'set -e'
       - equal:
           path: spec.activeDeadlineSeconds
-          value: 600
+          value: 1800
       - matchRegex:
           path: spec.template.spec.containers[0].command[2]
           pattern: './phing maintenance-off\n'

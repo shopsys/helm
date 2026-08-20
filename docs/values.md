@@ -86,7 +86,7 @@ deploy:
   firstDeploy: { enabled: false, loadDemoData: false }
   migration: { enabled, targets: {continuous, firstDeploy, firstDeployWithDemoData},
                resources, activeDeadlineSeconds }   # hard Job bound, default 1800 s
-  postDeploy: { enabled, resources, activeDeadlineSeconds }   # hard Job bound, default 600 s
+  postDeploy: { enabled, resources, activeDeadlineSeconds }   # hard Job bound, default 1800 s
   hooks: { kubectlImage, serviceAccountName }
 
 extraManifests: []           # raw manifests (rendered through tpl) — escape hatch

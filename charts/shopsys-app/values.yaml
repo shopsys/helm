@@ -361,8 +361,10 @@ deploy:
     resources: {}
   postDeploy:
     enabled: true
-    # Hard bound for the post-deploy Job (seconds)
-    activeDeadlineSeconds: 600
+    # Hard bound for the post-deploy Job (seconds). Together with the migration bound this
+    # can exceed DEPLOY_TIMEOUT (2700 s) - acceptable, both hitting their ceiling in one
+    # deploy is not a normal scenario.
+    activeDeadlineSeconds: 1800
     resources: {}
   hooks:
     # kubectlImage is the image used by the cron-suspend hook Job; pinned tag on purpose
