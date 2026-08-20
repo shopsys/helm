@@ -17,7 +17,8 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "config": { "type": "string" },
-        "replicas": { "type": "integer", "minimum": 0 }
+        "replicas": { "type": "integer", "minimum": 0 },
+        "topologySpreadConstraints": { "type": "array" }
       }
     },
     "rabbitmq": {
@@ -25,6 +26,7 @@
       "properties": {
         "enabled": { "type": "boolean" },
         "replicas": { "type": "integer", "minimum": 0 },
+        "topologySpreadConstraints": { "type": "array" },
         "auth": {
           "type": "object",
           "properties": {
