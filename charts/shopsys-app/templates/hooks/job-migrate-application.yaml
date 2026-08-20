@@ -37,6 +37,10 @@ spec:
   backoffLimit: 0
   template:
     spec:
+      # Runs under the namespace default SA (as a pre-install hook it cannot reference the
+      # chart ServiceAccount, which does not exist yet); it never talks to the API, so the
+      # token is not mounted.
+      automountServiceAccountToken: false
       volumes:
         - name: domains-urls
           configMap:

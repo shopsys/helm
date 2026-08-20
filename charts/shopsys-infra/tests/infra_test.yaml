@@ -7,6 +7,7 @@ templates:
   - templates/ingress-rabbitmq.yaml
   - templates/rbac-deploy-hooks.yaml
   - templates/secret-rabbitmq.yaml
+  - templates/serviceaccount.yaml
 tests:
   - it: runs redis as the first container with the exporter sidecar and health probes
     template: templates/deployment-redis.yaml
@@ -92,3 +93,23 @@ tests:
       - equal:
           path: stringData.password
           value: secret
+
+  - it: runs infra pods under the chart ServiceAccount without token automount
+    template: templates/serviceaccount.yaml
+    asserts:
+      - equal:
+          path: metadata.name
+          value: shopsys-infra
+      - equal:
+          path: automountServiceAccountToken
+          value: false
+
+  - it: assigns the ServiceAccount to the rabbitmq pod
+    template: templates/statefulset-rabbitmq.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.serviceAccountName
+          value: shopsys-infra
+      - equal:
+          path: spec.template.spec.automountServiceAccountToken
+          value: false

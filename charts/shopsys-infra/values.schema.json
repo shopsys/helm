@@ -12,6 +12,15 @@
         "environment": { "type": "string" }
       }
     },
+    "serviceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "create": { "type": "boolean" },
+        "name": { "type": "string" },
+        "automountToken": { "type": "boolean" }
+      }
+    },
     "redis": {
       "type": "object",
       "properties": {

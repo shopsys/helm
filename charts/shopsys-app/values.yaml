@@ -65,6 +65,19 @@ registry:
 imagePullSecrets:
   - dockerregistry
 
+# ServiceAccount the workload pods run under (the hook Jobs keep the deploy-hooks SA).
+# None of the workloads talk to the Kubernetes API, so the token is not mounted:
+# automountToken is applied both on the chart-created ServiceAccount and at pod level on
+# every workload pod, so it holds even with create=false (external SA or the namespace
+# `default` fallback when `name` is left empty) - pod-level overrides the SA's own setting.
+# NOTE: the helmfile passes these values to both charts - leave `name` empty (each chart
+# defaults to its own chart name) or set create=false with an externally managed account;
+# an explicit name with create=true would make both releases fight over one ServiceAccount.
+serviceAccount:
+  create: true
+  name: ""              # generated from the chart name when empty
+  automountToken: false
+
 app:
   # Backend environment variables (webserver, cron, consumers, migration job, cron shell).
   # Values MUST be strings - quote values like "479411e7" in YAML.
