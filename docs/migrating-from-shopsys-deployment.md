@@ -131,8 +131,9 @@ Intentional differences of the phase-1 rewrite; everything else is a 1:1 port.
     `cron.resources` and `consumers.defaults.resources` (or per instance).
 22. **PodDisruptionBudgets for webserver and storefront**: the legacy package had none — a
     node drain could evict all replicas at once. The chart now renders a
-    `minAvailable: 1` PDB per component whenever it runs 2+ replicas (autoscaling enabled
-    or `replicas > 1`); single-replica setups get no PDB (it would block drains). Opt out
+    `minAvailable: 1` PDB per component whenever it is guaranteed to run 2+ replicas
+    (autoscaling enabled with `minReplicas > 1`, or fixed `replicas > 1`); setups that can
+    run a single replica get no PDB (it would block drains). Opt out
     via `webserver.pdb.enabled` / `storefront.pdb.enabled`. `topologySpreadConstraints`
     is also available as a standard component key (empty by default — the legacy
     anti-affinity defaults are kept untouched).

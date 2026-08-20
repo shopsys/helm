@@ -32,6 +32,11 @@ Every workload component (`webserver`, `storefront`, `cron`, `consumers.defaults
 | `securityContext` / `podSecurityContext` | security contexts |
 | `terminationGracePeriodSeconds`, `lifecycle` | shutdown behavior |
 
+`topologySpreadConstraints` is a raw passthrough — supply complete constraints. Prefer
+`whenUnsatisfiable: ScheduleAnyway` unless spread is a hard requirement (`DoNotSchedule`
+can leave pods Pending on small clusters), and add `matchLabelKeys: [pod-template-hash]`
+so the spread ignores old-ReplicaSet pods during rolling updates.
+
 ## Top-level structure
 
 ```yaml
@@ -76,7 +81,8 @@ app:                         # shared backend configuration
 
 webserver:                   # component (see standard keys) + phpFpm/nginx sub-containers;
                              #   `pdb: {enabled: true, minAvailable: 1}` - rendered only with
-                             #   2+ replicas (autoscaling on or replicas > 1)
+                             #   guaranteed 2+ replicas (autoscaling with minReplicas > 1,
+                             #   or replicas > 1)
 storefront:                  # component + its own `env` / `secretEnv` (storefront-secret-env Secret);
                              #   `pdb` - same as webserver
 cron:                        # component + `instances: [{name, schedule}]`;
