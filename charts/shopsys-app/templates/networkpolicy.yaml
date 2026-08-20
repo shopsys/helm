@@ -37,10 +37,9 @@ spec:
     - Ingress
   ingress:
     - from:
-        # e-shop ingresses
-        - namespaceSelector:
-            {{- toYaml .Values.networkPolicy.ingressControllerNamespace | nindent 12 }}
-        # the webserver's nginx proxies /_next/ and @storefront to the storefront
+        # the webserver's nginx proxies /_next/ and @storefront to the storefront; no
+        # shipped ingress targets the storefront directly (use networkPolicy.extraIngress
+        # when a project adds one)
         - podSelector: {}
       ports:
         - port: 3000

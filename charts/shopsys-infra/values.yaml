@@ -40,7 +40,8 @@ serviceAccount:
 
 # Opt-in NetworkPolicies - shared values section, see the app chart for documentation.
 # This chart renders the namespace-wide default deny, the redis/rabbitmq allows, the
-# extra-ingress escape hatch and the optional egress lockdown.
+# cert-manager HTTP01 solver allow, the extra-ingress escape hatch and the optional
+# egress lockdown.
 networkPolicy:
   enabled: false
   ingressControllerNamespace:

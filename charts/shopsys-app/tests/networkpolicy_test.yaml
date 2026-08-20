@@ -32,6 +32,12 @@ tests:
           path: spec.ingress[0].ports[0].port
           value: 3000
         documentIndex: 1
+      # no shipped ingress targets the storefront - in-namespace traffic only
+      - equal:
+          path: spec.ingress[0].from
+          value:
+            - podSelector: {}
+        documentIndex: 1
 
   - it: honors a custom ingress-controller namespace selector
     set:

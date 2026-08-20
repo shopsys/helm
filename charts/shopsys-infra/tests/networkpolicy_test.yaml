@@ -9,13 +9,13 @@ tests:
       - hasDocuments:
           count: 0
 
-  - it: renders the default ingress deny and the redis/rabbitmq allows
+  - it: renders the default ingress deny, the redis/rabbitmq allows and the acme-solver allow
     set:
       networkPolicy:
         enabled: true
     asserts:
       - hasDocuments:
-          count: 3
+          count: 4
       - equal:
           path: metadata.name
           value: default-deny-ingress
@@ -40,6 +40,53 @@ tests:
           path: spec.ingress[1].ports[0].port
           value: 15672
         documentIndex: 2
+      - equal:
+          path: metadata.name
+          value: allow-acme-solver
+        documentIndex: 3
+      - equal:
+          path: spec.podSelector.matchLabels["acme.cert-manager.io/http01-solver"]
+          value: "true"
+        documentIndex: 3
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 8089
+        documentIndex: 3
+
+  - it: skips the redis and rabbitmq allows when the workloads are disabled
+    set:
+      networkPolicy:
+        enabled: true
+      redis:
+        enabled: false
+      rabbitmq:
+        enabled: false
+    asserts:
+      - hasDocuments:
+          count: 2
+      - equal:
+          path: metadata.name
+          value: default-deny-ingress
+        documentIndex: 0
+      - equal:
+          path: metadata.name
+          value: allow-acme-solver
+        documentIndex: 1
+
+  - it: does not open 15672 when the management ingress does not render
+    set:
+      networkPolicy:
+        enabled: true
+      domains: []
+    asserts:
+      - equal:
+          path: spec.ingress[0].ports[0].port
+          value: 5672
+        documentIndex: 2
+      - equal:
+          path: spec.ingress[1].ports[0].port
+          value: 15692
+        documentIndex: 2
 
   - it: keeps egress open unless explicitly locked down
     set:
@@ -47,7 +94,7 @@ tests:
         enabled: true
     asserts:
       - hasDocuments:
-          count: 3
+          count: 4
 
   - it: locks down egress with DNS, in-namespace and custom rules
     set:
@@ -63,19 +110,19 @@ tests:
                 - port: 5432
     asserts:
       - hasDocuments:
-          count: 5
+          count: 6
       - equal:
           path: metadata.name
           value: default-deny-egress
-        documentIndex: 3
+        documentIndex: 4
       - equal:
           path: spec.egress[0].ports[0].port
           value: 53
-        documentIndex: 4
+        documentIndex: 5
       - equal:
           path: spec.egress[2].to[0].ipBlock.cidr
           value: 10.0.0.5/32
-        documentIndex: 4
+        documentIndex: 5
 
   - it: renders the extra-ingress escape hatch
     set:
@@ -87,12 +134,12 @@ tests:
                   cidr: 192.168.0.0/16
     asserts:
       - hasDocuments:
-          count: 4
+          count: 5
       - equal:
           path: metadata.name
           value: allow-extra-ingress
-        documentIndex: 3
+        documentIndex: 4
       - equal:
           path: spec.ingress[0].from[0].ipBlock.cidr
           value: 192.168.0.0/16
-        documentIndex: 3
+        documentIndex: 4

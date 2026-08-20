@@ -12,6 +12,7 @@ spec:
   podSelector: {}
   policyTypes:
     - Ingress
+{{- if .Values.redis.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -37,6 +38,8 @@ spec:
             {{- toYaml .Values.networkPolicy.monitoringNamespace | nindent 12 }}
       ports:
         - port: 9121
+{{- end }}
+{{- if .Values.rabbitmq.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -56,18 +59,44 @@ spec:
         - podSelector: {}
       ports:
         - port: 5672
+    {{- /* same condition as ingress-rabbitmq.yaml - no rule when no management ingress */}}
+    {{- if or .Values.rabbitmq.management.hostname (gt (len .Values.domains) 0) }}
     # management UI through the ingress controller
     - from:
         - namespaceSelector:
             {{- toYaml .Values.networkPolicy.ingressControllerNamespace | nindent 12 }}
       ports:
         - port: 15672
+    {{- end }}
     # prometheus scraping of the built-in exporter
     - from:
         - namespaceSelector:
             {{- toYaml .Values.networkPolicy.monitoringNamespace | nindent 12 }}
       ports:
         - port: 15692
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-acme-solver
+  labels:
+    {{- include "shopsys.labels" $ | nindent 4 }}
+spec:
+  # cert-manager's HTTP01 solver pods are spawned in this namespace for the ingress
+  # certificates and must accept the challenge request on 8089, or every issuance and
+  # renewal fails under the default deny. Deliberately not restricted to the
+  # ingress-controller namespace: cert-manager's self-check may reach the solver with a
+  # different source (load-balancer/externalTrafficPolicy specifics), and the solver
+  # serves nothing but the public challenge token. Selects no pods on DNS01 clusters.
+  podSelector:
+    matchLabels:
+      acme.cert-manager.io/http01-solver: "true"
+  policyTypes:
+    - Ingress
+  ingress:
+    - ports:
+        - port: 8089
 {{- with .Values.networkPolicy.extraIngress }}
 ---
 apiVersion: networking.k8s.io/v1
@@ -107,7 +136,9 @@ spec:
   policyTypes:
     - Egress
   egress:
-    # DNS anywhere (cluster DNS location differs per cluster)
+    # DNS anywhere: the cluster DNS location differs per cluster (kube-system, node-local
+    # caches on link-local IPs) and cannot be selected generically. Residual risk: DNS
+    # tunneling remains a possible exfiltration path under the lockdown.
     - ports:
         - port: 53
           protocol: UDP

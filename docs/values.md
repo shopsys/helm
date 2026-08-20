@@ -71,16 +71,21 @@ serviceAccount:              # per-chart SA the workload pods run under (no API 
                              #   an explicit name would collide between the two releases)
   automountToken: false
 
-networkPolicy:               # opt-in; default-deny ingress + per-workload allows.
-  enabled: false             #   Roll out on a dev environment first (CNI must enforce
-  ingressControllerNamespace:  #   policies; verify kubelet probes still pass)
+networkPolicy:               # opt-in; default-deny ingress + per-workload allows (incl.
+  enabled: false             #   cert-manager's HTTP01 solver pods on port 8089 - they run
+                             #   in this namespace and issuance/renewal would break without
+                             #   the allow). Roll out on a dev environment first (CNI must
+                             #   enforce policies; verify kubelet probes still pass)
+  ingressControllerNamespace:
     matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
   monitoringNamespace:
     matchLabels: { kubernetes.io/metadata.name: monitoring }
   extraIngress: []           # raw ingress rules applied to all pods (escape hatch)
   egress:                    # optional egress lockdown: DNS + in-namespace allowed,
     enabled: false           #   everything else must be listed in `rules` (incl. the
-    rules: []                #   K8s API for the cron-suspend hook, DB, ES, S3, SMTP)
+    rules: []                #   K8s API for the cron-suspend hook, DB, ES, S3, SMTP).
+                             #   DNS is allowed to ANY destination (cluster DNS location
+                             #   differs per cluster) - DNS tunneling stays possible
 
 app:                         # shared backend configuration
   env: {}                    # non-sensitive backend env vars (webserver, cron, consumers, migration)
